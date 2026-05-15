@@ -39,3 +39,29 @@ export interface AnalyzeRequest {
   ai_provider: AIProvider;
   gemini_model?: GeminiModel;
 }
+
+// ─── 프로젝트 ────────────────────────────────────────────────────────────────
+
+export interface AnalysisInfo {
+  ai_provider: string;
+  model_used: string;
+  warnings: string[];
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  script: string;
+  analysis_info: AnalysisInfo | null;
+  scenes: Scene[];
+}
+
+export interface ProjectMeta {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  scene_count: number;
+}

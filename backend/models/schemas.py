@@ -27,12 +27,18 @@ class MediaPlan(BaseModel):
     mood: MoodType = "calm"
 
 
+class SceneAssets(BaseModel):
+    audio: str | None = None    # 상대경로: media/scene_1_audio.mp3
+    visual: str | None = None   # 상대경로: media/scene_1_image.png
+
+
 class Scene(BaseModel):
     scene_id: int
     text: str
     topic_summary: str
     estimated_duration: float
     media: MediaPlan
+    assets: SceneAssets = SceneAssets()
 
 
 class AnalyzeResponse(BaseModel):

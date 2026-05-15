@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from routers.scenes import router
+from routers.scenes import router as scenes_router
+from routers.projects import router as projects_router
 
 load_dotenv()
 
@@ -14,7 +15,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
+app.include_router(scenes_router)
+app.include_router(projects_router)
 
 
 @app.get("/health")
