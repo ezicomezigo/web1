@@ -44,14 +44,14 @@ async def analyze_with_claude(script: str) -> AnalyzeResponse:
             text=texts[i],
             topic_summary=r.topic_summary,
             estimated_duration=r.estimated_duration,
+            media=r.media,
         )
         for i, r in enumerate(ranges)
     ]
-    total_duration = sum(s.estimated_duration for s in scenes)
 
     return AnalyzeResponse(
         scenes=scenes,
-        total_duration=total_duration,
+        total_duration=sum(s.estimated_duration for s in scenes),
         total_scenes=len(scenes),
         ai_provider="claude",
         model_used=CLAUDE_MODEL,
