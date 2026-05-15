@@ -8,12 +8,14 @@ import {
 import {
   SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
-import { Scene, MediaPlan } from "../types";
+import { Scene, MediaPlan, TTSSettings } from "../types";
 import { renumber, estimateDuration, DEFAULT_MEDIA } from "../utils/sceneOps";
 import SceneCard from "./SceneCard";
 import SplitSceneModal from "./SplitSceneModal";
 import AddSceneModal from "./AddSceneModal";
-import { Film, Clock, AlertTriangle, CheckCircle, Plus } from "lucide-react";
+import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2 } from "lucide-react";
+
+const API_BASE = "http://localhost:8000";
 
 interface Props {
   scenes: Scene[];
@@ -22,11 +24,16 @@ interface Props {
   aiProvider: string;
   modelUsed: string;
   disabled?: boolean;
+  projectId: string;
+  ttsSettings: TTSSettings;
 }
 
-export default function SceneEditor({ scenes, onChange, warnings, aiProvider, modelUsed, disabled = false }: Props) {
-  const [splitTarget, setSplitTarget] = useState<number | null>(null);   // scene index
-  const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null); // -1 = 맨 앞
+export default function SceneEditor({
+  scenes, onChange, warnings, aiProvider, modelUsed, disabled = false, projectId, ttsSettings,
+}: Props) {
+  const [splitTarget, setSplitTarget] = useState<number | null>(null);
+  const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null);
+  const [batchLoading, setBatchLoading] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -36,6 +43,38 @@ export default function SceneEditor({ scenes, onChange, warnings, aiProvider, mo
   const totalDuration = scenes.reduce((s, sc) => s + sc.estimated_duration, 0);
   const totalMin = Math.floor(totalDuration / 60);
   const totalSec = Math.round(totalDuration % 60);
+
+  // ─── 오디오 업데이트 ─────────────────────────────────────────────────────
+  function handleAudioUpdate(sceneId: number, audioPath: string | null, duration: number) {
+    onChange(scenes.map(s => s.scene_id === sceneId
+      ? { ...s, assets: { ...(s.assets ?? { visual: null }), audio: audioPath }, estimated_duration: duration }
+      : s
+    ));
+  }
+
+  // ─── 전체 오디오 일괄 생성 ───────────────────────────────────────────────
+  async function handleBatchGenerate() {
+    if (!confirm(`${scenes.length}개 장면의 오디오를 모두 생성합니다. 계속하시겠습니까?`)) return;
+    setBatchLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}/audio/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ttsSettings),
+      });
+      if (!res.ok) throw new Error("일괄 생성 실패");
+      const results: { scene_id: number; audio_path?: string; duration?: number; ok: boolean }[] = await res.json();
+      onChange(scenes.map(s => {
+        const r = results.find(x => x.scene_id === s.scene_id);
+        if (r?.ok && r.audio_path) {
+          return { ...s, assets: { ...(s.assets ?? { visual: null }), audio: r.audio_path }, estimated_duration: r.duration ?? s.estimated_duration };
+        }
+        return s;
+      }));
+    } finally {
+      setBatchLoading(false);
+    }
+  }
 
   // ─── 드래그앤드롭 ────────────────────────────────────────────────────────
   function handleDragEnd(e: DragEndEvent) {
@@ -119,6 +158,16 @@ export default function SceneEditor({ scenes, onChange, warnings, aiProvider, mo
         <span className="text-xs text-indigo-400">
           {aiProvider === "claude" ? "Claude" : "Gemini"} · {modelUsed}
         </span>
+        <button
+          onClick={handleBatchGenerate}
+          disabled={batchLoading || disabled}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40"
+        >
+          {batchLoading
+            ? <><Loader2 size={11} className="animate-spin" /> 생성 중...</>
+            : <><Mic2 size={11} /> 전체 오디오 생성</>
+          }
+        </button>
       </div>
 
       {/* 원본 텍스트 검증 */}
@@ -154,7 +203,10 @@ export default function SceneEditor({ scenes, onChange, warnings, aiProvider, mo
               scene={scene}
               index={index}
               total={scenes.length}
+              projectId={projectId}
+              ttsSettings={ttsSettings}
               onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
+              onAudioUpdate={handleAudioUpdate}
               onSplit={() => setSplitTarget(index)}
               onMerge={(dir) => handleMerge(index, dir)}
               onDelete={() => handleDelete(index)}

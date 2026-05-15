@@ -1,22 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Scene, MediaPlan, MediaType, MoodType } from "../types";
+import { Scene, MediaPlan, MediaType, MoodType, TTSSettings } from "../types";
 import { estimateDuration } from "../utils/sceneOps";
 import MediaPlanEditor from "./MediaPlanEditor";
 import {
   GripVertical, Pencil, Check, X, Scissors,
   Trash2, Plus, Sparkles, Image, Video,
-  ChevronUp, ChevronDown,
+  ChevronUp, ChevronDown, Mic2, Loader2, Play, RotateCcw, Trash,
 } from "lucide-react";
+
+const API_BASE = "http://localhost:8000";
 
 interface Props {
   scene: Scene;
   index: number;
   total: number;
+  projectId: string;
+  ttsSettings: TTSSettings;
   onUpdate: (text: string, topicSummary: string, media: MediaPlan) => void;
+  onAudioUpdate: (sceneId: number, audioPath: string | null, duration: number) => void;
   onSplit: () => void;
   onMerge: (dir: "up" | "down") => void;
   onDelete: () => void;
@@ -41,13 +46,16 @@ function durationColor(sec: number) {
 }
 
 export default function SceneCard({
-  scene, index, total,
-  onUpdate, onSplit, onMerge, onDelete, onAddAfter,
+  scene, index, total, projectId, ttsSettings,
+  onUpdate, onAudioUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(scene.text);
   const [draftTopic, setDraftTopic] = useState(scene.topic_summary);
   const [draftMedia, setDraftMedia] = useState<MediaPlan>(scene.media);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: scene.scene_id });
@@ -79,6 +87,37 @@ export default function SceneCard({
   function cancelEdit() {
     setEditing(false);
   }
+
+  async function generateAudio() {
+    setAudioLoading(true);
+    setAudioError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${scene.scene_id}/audio`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ttsSettings),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail ?? `HTTP ${res.status}`);
+      }
+      const data: { audio_path: string; duration: number } = await res.json();
+      onAudioUpdate(scene.scene_id, data.audio_path, data.duration);
+    } catch (e) {
+      setAudioError(e instanceof Error ? e.message : "오디오 생성 실패");
+    } finally {
+      setAudioLoading(false);
+    }
+  }
+
+  async function deleteAudio() {
+    await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${scene.scene_id}/audio`, { method: "DELETE" });
+    onAudioUpdate(scene.scene_id, null, estimateDuration(scene.text));
+  }
+
+  const audioUrl = scene.assets?.audio
+    ? `${API_BASE}/api/projects/${projectId}/${scene.assets.audio}`
+    : null;
 
   const liveDuration = editing ? estimateDuration(draftText) : scene.estimated_duration;
 
@@ -156,6 +195,44 @@ export default function SceneCard({
             )}
           </div>
         )}
+
+        {/* 오디오 영역 */}
+        <div className="mx-4 mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+          {audioUrl ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <Play size={12} className="text-emerald-600 shrink-0" />
+                <span className="text-xs font-medium text-emerald-700">오디오 생성됨 · {scene.estimated_duration.toFixed(1)}초</span>
+                <div className="flex-1" />
+                <button onClick={generateAudio} disabled={audioLoading}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
+                  {audioLoading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 재생성
+                </button>
+                <button onClick={deleteAudio} className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500">
+                  <Trash size={11} />
+                </button>
+              </div>
+              <audio ref={audioRef} src={audioUrl} controls
+                className="w-full h-8 [&::-webkit-media-controls-panel]:bg-white" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Mic2 size={12} className="text-gray-400 shrink-0" />
+              <span className="text-xs text-gray-400 flex-1">오디오 없음</span>
+              {audioError && <span className="text-xs text-red-500 truncate max-w-[180px]" title={audioError}>{audioError}</span>}
+              <button
+                onClick={generateAudio}
+                disabled={audioLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {audioLoading
+                  ? <><Loader2 size={11} className="animate-spin" /> 생성 중...</>
+                  : <><Mic2 size={11} /> 오디오 생성</>
+                }
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* 액션 버튼 */}
         <div className="flex items-center gap-1 px-4 pb-3 border-t border-gray-50 pt-2">

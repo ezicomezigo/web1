@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { AIProvider, AnalyzeResponse, GeminiModel, GEMINI_MODELS, Scene } from "./types";
+import { AIProvider, AnalyzeResponse, GeminiModel, GEMINI_MODELS, TTSSettings, GEMINI_TTS_MODELS } from "./types";
 import { useProject } from "./hooks/useProject";
 import AISelector from "./components/AISelector";
 import ScriptInput from "./components/ScriptInput";
 import SceneEditor from "./components/SceneEditor";
 import MediaRatioSlider, { MediaRatio } from "./components/MediaRatioSlider";
+import TTSSettingsPanel from "./components/TTSSettings";
 import ProjectBar from "./components/ProjectBar";
 import ProjectListModal from "./components/ProjectListModal";
 import { Loader2, Scissors, FolderPlus } from "lucide-react";
@@ -23,6 +24,12 @@ export default function Home() {
   const [provider, setProvider] = useState<AIProvider>("claude");
   const [geminiModel, setGeminiModel] = useState<GeminiModel>(GEMINI_MODELS[0]);
   const [mediaRatio, setMediaRatio] = useState<MediaRatio>({ ai_image: 30, stock_photo: 30, stock_video: 40 });
+  const [ttsSettings, setTtsSettings] = useState<TTSSettings>({
+    provider: "gemini",
+    model: GEMINI_TTS_MODELS[0],
+    voice: "Kore",
+    speed: 1.0,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showProjects, setShowProjects] = useState(false);
@@ -199,18 +206,26 @@ export default function Home() {
           </div>
         )}
 
-        {/* 장면 편집 */}
+        {/* TTS 설정 + 장면 편집 */}
         {project && analysisInfo && scenes.length > 0 && (
-          <div>
-            <h2 className="text-lg font-bold text-gray-800 mb-4">장면 편집</h2>
-            <SceneEditor
-              scenes={scenes}
-              onChange={setScenes}
-              warnings={analysisInfo.warnings}
-              aiProvider={analysisInfo.ai_provider}
-              modelUsed={analysisInfo.model_used}
-              disabled={loading}
-            />
+          <div className="flex flex-col gap-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <TTSSettingsPanel value={ttsSettings} onChange={setTtsSettings} disabled={loading} />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-bold text-gray-800 mb-4">장면 편집</h2>
+              <SceneEditor
+                scenes={scenes}
+                onChange={setScenes}
+                warnings={analysisInfo.warnings}
+                aiProvider={analysisInfo.ai_provider}
+                modelUsed={analysisInfo.model_used}
+                disabled={loading}
+                projectId={project.id}
+                ttsSettings={ttsSettings}
+              />
+            </div>
           </div>
         )}
       </div>
