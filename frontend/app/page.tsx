@@ -5,6 +5,7 @@ import { AIProvider, AnalyzeResponse, GeminiModel, GEMINI_MODELS } from "./types
 import AISelector from "./components/AISelector";
 import ScriptInput from "./components/ScriptInput";
 import SceneList from "./components/SceneList";
+import MediaRatioSlider, { MediaRatio } from "./components/MediaRatioSlider";
 import { Loader2, Scissors } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -13,6 +14,7 @@ export default function Home() {
   const [script, setScript] = useState("");
   const [provider, setProvider] = useState<AIProvider>("claude");
   const [geminiModel, setGeminiModel] = useState<GeminiModel>(GEMINI_MODELS[0]);
+  const [mediaRatio, setMediaRatio] = useState<MediaRatio>({ ai_image: 30, stock_photo: 30, stock_video: 40 });
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,7 @@ export default function Home() {
           script,
           ai_provider: provider,
           gemini_model: provider === "gemini" ? geminiModel : undefined,
+          media_ratio: mediaRatio,
         }),
       });
 
@@ -67,6 +70,7 @@ export default function Home() {
             onProviderChange={setProvider}
             onGeminiModelChange={setGeminiModel}
           />
+          <MediaRatioSlider value={mediaRatio} onChange={setMediaRatio} />
 
           {error && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5">

@@ -2,7 +2,7 @@ import json
 import re
 import logging
 import anthropic
-from models.schemas import AnalyzeResponse, Scene, SceneRange
+from models.schemas import AnalyzeResponse, AnalyzeRequest, Scene, SceneRange
 from services.text_utils import split_into_sentences, build_prompt, reconstruct_scenes, validate_coverage
 
 logger = logging.getLogger(__name__)
@@ -18,14 +18,15 @@ def extract_json(raw: str) -> dict:
     return json.loads(raw)
 
 
-async def analyze_with_claude(script: str) -> AnalyzeResponse:
-    sentences = split_into_sentences(script)
+async def analyze_with_claude(req: AnalyzeRequest) -> AnalyzeResponse:
+    sentences = split_into_sentences(req.script)
+    ratio = req.media_ratio.model_dump() if req.media_ratio else None
     client = anthropic.Anthropic()
 
     message = client.messages.create(
         model=CLAUDE_MODEL,
         max_tokens=8192,
-        messages=[{"role": "user", "content": build_prompt(sentences)}],
+        messages=[{"role": "user", "content": build_prompt(sentences, ratio)}],
     )
 
     try:

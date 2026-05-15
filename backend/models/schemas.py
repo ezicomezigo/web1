@@ -7,10 +7,17 @@ MediaType = Literal["ai_image", "stock_photo", "stock_video"]
 MoodType = Literal["bright", "calm", "serious", "energetic", "dark", "emotional"]
 
 
+class MediaRatio(BaseModel):
+    ai_image: int = 30       # AI 이미지 비율 (%)
+    stock_photo: int = 30    # 스톡 사진 비율 (%)
+    stock_video: int = 40    # 스톡 영상 비율 (%)
+
+
 class AnalyzeRequest(BaseModel):
     script: str
     ai_provider: Literal["claude", "gemini"]
     gemini_model: str | None = None
+    media_ratio: MediaRatio = MediaRatio()
 
 
 class MediaPlan(BaseModel):

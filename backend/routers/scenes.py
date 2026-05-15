@@ -13,13 +13,13 @@ async def analyze_script(req: AnalyzeRequest):
 
     try:
         if req.ai_provider == "claude":
-            return await analyze_with_claude(req.script)
+            return await analyze_with_claude(req)
 
         elif req.ai_provider == "gemini":
             model = req.gemini_model or GEMINI_MODELS[0]
             if model not in GEMINI_MODELS:
                 raise HTTPException(status_code=400, detail=f"지원하지 않는 Gemini 모델입니다: {model}")
-            return await analyze_with_gemini(req.script, model)
+            return await analyze_with_gemini(req, model)
 
         raise HTTPException(status_code=400, detail="ai_provider는 'claude' 또는 'gemini'여야 합니다.")
 

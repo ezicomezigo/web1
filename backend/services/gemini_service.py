@@ -3,7 +3,7 @@ import re
 import logging
 import google.generativeai as genai
 import os
-from models.schemas import AnalyzeResponse, Scene, SceneRange
+from models.schemas import AnalyzeResponse, AnalyzeRequest, Scene, SceneRange
 from services.text_utils import split_into_sentences, build_prompt, reconstruct_scenes, validate_coverage
 
 logger = logging.getLogger(__name__)
@@ -18,9 +18,10 @@ def extract_json(raw: str) -> dict:
     return json.loads(raw)
 
 
-async def analyze_with_gemini(script: str, model_name: str) -> AnalyzeResponse:
+async def analyze_with_gemini(req: AnalyzeRequest, model_name: str) -> AnalyzeResponse:
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    sentences = split_into_sentences(script)
+    sentences = split_into_sentences(req.script)
+    ratio = req.media_ratio.model_dump() if req.media_ratio else None
 
     model = genai.GenerativeModel(
         model_name=model_name,
@@ -29,7 +30,7 @@ async def analyze_with_gemini(script: str, model_name: str) -> AnalyzeResponse:
         ),
     )
 
-    response = model.generate_content(build_prompt(sentences))
+    response = model.generate_content(build_prompt(sentences, ratio))
 
     try:
         data = extract_json(response.text)

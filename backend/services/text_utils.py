@@ -71,6 +71,11 @@ SCENE_SPLIT_PROMPT = """당신은 유튜브 영상 제작 전문가입니다.
 - "stock_photo": 인물, 장소, 사물, 정적인 실사 이미지가 어울리는 경우
 - "stock_video": 동작, 자연, 군중, 도시 풍경 등 움직이는 장면이 어울리는 경우
 
+## 미디어 비율 목표 (전체 장면 기준)
+{ratio_guide}
+이 비율을 최대한 맞춰서 장면별 미디어 유형을 결정하세요.
+콘텐츠와 전혀 맞지 않는 경우에는 비율보다 콘텐츠 적합성을 우선합니다.
+
 ## 미디어 유형별 추가 정보
 - "ai_image" 선택 시: 영어로 된 이미지 생성 프롬프트 (구체적인 구도, 스타일, 분위기 포함)
 - "stock_photo" 또는 "stock_video" 선택 시: 영어 검색 키워드 3~5개 (짧고 직관적으로)
@@ -116,6 +121,23 @@ bright / calm / serious / energetic / dark / emotional 중 하나 선택
 {numbered_sentences}"""
 
 
-def build_prompt(sentences: list) -> str:
+def build_prompt(sentences: list, media_ratio: dict | None = None) -> str:
     numbered = '\n'.join(f'[{i}] {s}' for i, s in enumerate(sentences))
-    return SCENE_SPLIT_PROMPT.format(total=len(sentences), numbered_sentences=numbered)
+
+    if media_ratio:
+        ai = media_ratio.get("ai_image", 30)
+        photo = media_ratio.get("stock_photo", 30)
+        video = media_ratio.get("stock_video", 40)
+        ratio_guide = (
+            f"- AI 이미지(ai_image): 약 {ai}%\n"
+            f"- 스톡 사진(stock_photo): 약 {photo}%\n"
+            f"- 스톡 영상(stock_video): 약 {video}%"
+        )
+    else:
+        ratio_guide = "- AI가 콘텐츠에 맞게 자유롭게 결정"
+
+    return SCENE_SPLIT_PROMPT.format(
+        total=len(sentences),
+        numbered_sentences=numbered,
+        ratio_guide=ratio_guide,
+    )
