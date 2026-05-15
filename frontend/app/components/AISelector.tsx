@@ -45,10 +45,15 @@ export default function AISelector({
           >
             {GEMINI_MODELS.map((m) => (
               <option key={m} value={m}>
-                {m}
+                {m === "gemini-2.5-flash" ? `${m} (권장)` : m}
               </option>
             ))}
           </select>
+          {geminiModel !== "gemini-2.5-flash" && (
+            <p className="text-xs text-amber-600 bg-amber-50 rounded px-2 py-1">
+              preview 모델은 출력 한도가 낮아 긴 대본에서 오류가 발생할 수 있습니다.
+            </p>
+          )}
         </div>
       )}
     </div>
