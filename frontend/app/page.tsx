@@ -16,7 +16,7 @@ const API_BASE = "http://localhost:8000";
 export default function Home() {
   const {
     project, isDirty, isSaving, lastSavedAt, draft,
-    createProject, loadProject, saveProject, deleteProject, renameProject, listProjects,
+    createProject, createProjectWithData, loadProject, saveProject, deleteProject, renameProject, listProjects,
     setScript, setScenes, setAnalysisInfo, clearDraft,
   } = useProject();
 
@@ -103,10 +103,11 @@ export default function Home() {
             <div className="flex gap-2 ml-4 shrink-0">
               <button
                 onClick={async () => {
-                  const p = await createProject("복원된 프로젝트");
-                  setScript(draft.script);
-                  if (draft.scenes.length) setScenes(draft.scenes);
-                  if (draft.analysisInfo) setAnalysisInfo(draft.analysisInfo);
+                  await createProjectWithData("복원된 프로젝트", {
+                    script: draft.script,
+                    scenes: draft.scenes.length ? draft.scenes : undefined,
+                    analysis_info: draft.analysisInfo ?? undefined,
+                  });
                   clearDraft();
                 }}
                 className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

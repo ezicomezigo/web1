@@ -22,6 +22,7 @@ export interface UseProjectReturn {
   draft: Draft | null;
 
   createProject: (name: string) => Promise<Project>;
+  createProjectWithData: (name: string, data: Partial<Pick<Project, "script" | "scenes" | "analysis_info">>) => Promise<Project>;
   loadProject: (id: string) => Promise<void>;
   saveProject: () => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
@@ -32,8 +33,20 @@ export interface UseProjectReturn {
   setScenes: (s: Scene[]) => void;
   setAnalysisInfo: (a: AnalysisInfo | null) => void;
   clearDraft: () => void;
-  restoreFromDraft: (draft: Draft) => void;
   discardProject: () => void;
+}
+
+async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(url, init);
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      detail = body.detail ?? JSON.stringify(body);
+    } catch {}
+    throw new Error(detail);
+  }
+  return res;
 }
 
 export function useProject(): UseProjectReturn {
@@ -79,7 +92,7 @@ export function useProject(): UseProjectReturn {
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [isDirty, project?.scenes, project?.script]);
 
-  // 프로젝트 없을 때 draft 저장 (1초 디바운스)
+  // 프로젝트 없을 때 draft를 localStorage에 보존 (1초 디바운스)
   useEffect(() => {
     if (project) return;
     const timer = setTimeout(() => {
@@ -93,7 +106,7 @@ export function useProject(): UseProjectReturn {
     if (!project) return;
     setIsSaving(true);
     try {
-      const res = await fetch(`${API}/${project.id}`, {
+      const res = await apiFetch(`${API}/${project.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -103,7 +116,6 @@ export function useProject(): UseProjectReturn {
           scenes: project.scenes,
         }),
       });
-      if (!res.ok) throw new Error("저장 실패");
       const saved: Project = await res.json();
       setProject(saved);
       setIsDirty(false);
@@ -115,12 +127,11 @@ export function useProject(): UseProjectReturn {
   }, [project]);
 
   async function createProject(name: string): Promise<Project> {
-    const res = await fetch(API, {
+    const res = await apiFetch(API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    if (!res.ok) throw new Error("프로젝트 생성 실패");
     const p: Project = await res.json();
     setProject(p);
     setIsDirty(false);
@@ -131,9 +142,43 @@ export function useProject(): UseProjectReturn {
     return p;
   }
 
+  // draft 복원용: 생성 + 데이터를 한 번에 저장 (stale closure 문제 방지)
+  async function createProjectWithData(
+    name: string,
+    data: Partial<Pick<Project, "script" | "scenes" | "analysis_info">>
+  ): Promise<Project> {
+    // 1) 빈 프로젝트 생성
+    const createRes = await apiFetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const newProject: Project = await createRes.json();
+
+    // 2) 데이터를 바로 저장 (setState 비동기 문제 없이 직접 API 호출)
+    const saveRes = await apiFetch(`${API}/${newProject.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: newProject.name,
+        script: data.script ?? "",
+        analysis_info: data.analysis_info ?? null,
+        scenes: data.scenes ?? [],
+      }),
+    });
+    const saved: Project = await saveRes.json();
+
+    setProject(saved);
+    setIsDirty(false);
+    setLastSavedAt(saved.updated_at);
+    localStorage.setItem(LAST_PROJECT_KEY, saved.id);
+    localStorage.removeItem(DRAFT_KEY);
+    setDraft(null);
+    return saved;
+  }
+
   async function loadProject(id: string): Promise<void> {
-    const res = await fetch(`${API}/${id}`);
-    if (!res.ok) throw new Error("불러오기 실패");
+    const res = await apiFetch(`${API}/${id}`);
     const p: Project = await res.json();
     setProject(p);
     setIsDirty(false);
@@ -142,8 +187,7 @@ export function useProject(): UseProjectReturn {
   }
 
   async function deleteProject(id: string): Promise<void> {
-    const res = await fetch(`${API}/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("삭제 실패");
+    await apiFetch(`${API}/${id}`, { method: "DELETE" });
     if (project?.id === id) {
       setProject(null);
       setIsDirty(false);
@@ -152,47 +196,40 @@ export function useProject(): UseProjectReturn {
   }
 
   async function renameProject(id: string, name: string): Promise<void> {
-    const res = await fetch(`${API}/${id}/rename`, {
+    await apiFetch(`${API}/${id}/rename`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    if (!res.ok) throw new Error("이름 변경 실패");
     if (project?.id === id) setProject(p => p ? { ...p, name } : p);
   }
 
   async function listProjects(): Promise<ProjectMeta[]> {
-    const res = await fetch(API);
-    if (!res.ok) throw new Error("목록 불러오기 실패");
+    const res = await apiFetch(API);
     return res.json();
   }
 
   function setScript(script: string) {
     setProject(p => p ? { ...p, script } : p);
-    if (!project) setDraft(d => ({ ...(d ?? { scenes: [], analysisInfo: null, savedAt: "" }), script, savedAt: new Date().toISOString() }));
+    setDraft(d => d ? { ...d, script, savedAt: new Date().toISOString() } : null);
     setIsDirty(true);
   }
 
   function setScenes(scenes: Scene[]) {
     setProject(p => p ? { ...p, scenes } : p);
-    if (!project) setDraft(d => ({ ...(d ?? { script: "", analysisInfo: null, savedAt: "" }), scenes, savedAt: new Date().toISOString() }));
+    setDraft(d => d ? { ...d, scenes, savedAt: new Date().toISOString() } : null);
     setIsDirty(true);
   }
 
   function setAnalysisInfo(analysis_info: AnalysisInfo | null) {
     setProject(p => p ? { ...p, analysis_info } : p);
-    if (!project) setDraft(d => ({ ...(d ?? { script: "", scenes: [], savedAt: "" }), analysisInfo: analysis_info, savedAt: new Date().toISOString() }));
+    setDraft(d => d ? { ...d, analysisInfo: analysis_info, savedAt: new Date().toISOString() } : null);
     setIsDirty(true);
   }
 
   function clearDraft() {
     localStorage.removeItem(DRAFT_KEY);
     setDraft(null);
-  }
-
-  function restoreFromDraft(d: Draft) {
-    setProject(null);
-    setDraft(d);
   }
 
   function discardProject() {
@@ -204,8 +241,9 @@ export function useProject(): UseProjectReturn {
 
   return {
     project, isDirty, isSaving, lastSavedAt, draft,
-    createProject, loadProject, saveProject, deleteProject, renameProject, listProjects,
+    createProject, createProjectWithData,
+    loadProject, saveProject, deleteProject, renameProject, listProjects,
     setScript, setScenes, setAnalysisInfo,
-    clearDraft, restoreFromDraft, discardProject,
+    clearDraft, discardProject,
   };
 }

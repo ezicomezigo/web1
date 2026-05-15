@@ -1,4 +1,3 @@
-import json
 import shutil
 from pathlib import Path
 from datetime import datetime
@@ -9,7 +8,7 @@ from models.project import Project, ProjectMeta, ProjectCreateRequest, ProjectSa
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 PROJECTS_DIR = Path(__file__).parent.parent / "projects"
-PROJECTS_DIR.mkdir(exist_ok=True)
+PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def project_path(project_id: str) -> Path:

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal
 
 GEMINI_MODELS = ["gemini-2.5-flash", "gemini-3-flash-preview", "gemini-3.1-pro-preview"]
@@ -38,7 +38,7 @@ class Scene(BaseModel):
     topic_summary: str
     estimated_duration: float
     media: MediaPlan
-    assets: SceneAssets = SceneAssets()
+    assets: SceneAssets = Field(default_factory=SceneAssets)
 
 
 class AnalyzeResponse(BaseModel):
