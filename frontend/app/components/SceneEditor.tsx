@@ -21,9 +21,10 @@ interface Props {
   warnings: string[];
   aiProvider: string;
   modelUsed: string;
+  disabled?: boolean;
 }
 
-export default function SceneEditor({ scenes, onChange, warnings, aiProvider, modelUsed }: Props) {
+export default function SceneEditor({ scenes, onChange, warnings, aiProvider, modelUsed, disabled = false }: Props) {
   const [splitTarget, setSplitTarget] = useState<number | null>(null);   // scene index
   const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null); // -1 = 맨 앞
 
@@ -96,6 +97,14 @@ export default function SceneEditor({ scenes, onChange, warnings, aiProvider, mo
   }
 
   return (
+    <div className={`relative ${disabled ? "pointer-events-none" : ""}`}>
+    {disabled && (
+      <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] rounded-xl z-10 flex items-center justify-center">
+        <p className="text-sm text-indigo-600 font-medium bg-white/90 px-4 py-2 rounded-lg shadow-sm border border-indigo-100">
+          AI 분석 중에는 장면을 편집할 수 없습니다
+        </p>
+      </div>
+    )}
     <>
       {/* 요약 헤더 */}
       <div className="flex items-center justify-between px-4 py-3 bg-indigo-50 rounded-xl border border-indigo-100 mb-4">
@@ -174,5 +183,6 @@ export default function SceneEditor({ scenes, onChange, warnings, aiProvider, mo
         />
       )}
     </>
+    </div>
   );
 }

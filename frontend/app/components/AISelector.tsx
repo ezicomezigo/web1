@@ -5,6 +5,7 @@ import { AIProvider, GeminiModel, GEMINI_MODELS } from "../types";
 interface Props {
   provider: AIProvider;
   geminiModel: GeminiModel;
+  disabled?: boolean;
   onProviderChange: (p: AIProvider) => void;
   onGeminiModelChange: (m: GeminiModel) => void;
 }
@@ -12,11 +13,12 @@ interface Props {
 export default function AISelector({
   provider,
   geminiModel,
+  disabled = false,
   onProviderChange,
   onGeminiModelChange,
 }: Props) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className={`flex flex-col gap-3 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
       <label className="text-sm font-semibold text-gray-700">AI 모델 선택</label>
 
       <div className="flex gap-3">

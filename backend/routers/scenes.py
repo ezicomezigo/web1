@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+import anthropic
 from models.schemas import AnalyzeRequest, AnalyzeResponse, GEMINI_MODELS
 from services.claude_service import analyze_with_claude
 from services.gemini_service import analyze_with_gemini
@@ -25,7 +26,9 @@ async def analyze_script(req: AnalyzeRequest):
 
     except HTTPException:
         raise
+    except anthropic.AuthenticationError:
+        raise HTTPException(status_code=401, detail="Anthropic API 키가 유효하지 않습니다. backend/.env 파일의 ANTHROPIC_API_KEY를 확인해주세요.")
     except ValueError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI 분석 중 오류가 발생했습니다: {e}")

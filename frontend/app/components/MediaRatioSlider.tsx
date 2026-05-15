@@ -11,6 +11,7 @@ export interface MediaRatio {
 interface Props {
   value: MediaRatio;
   onChange: (r: MediaRatio) => void;
+  disabled?: boolean;
 }
 
 const KEYS: { key: keyof MediaRatio; label: string; color: string }[] = [
@@ -19,7 +20,7 @@ const KEYS: { key: keyof MediaRatio; label: string; color: string }[] = [
   { key: "stock_video", label: "스톡 영상",  color: "bg-teal-500" },
 ];
 
-export default function MediaRatioSlider({ value, onChange }: Props) {
+export default function MediaRatioSlider({ value, onChange, disabled = false }: Props) {
   // 하나를 바꾸면 나머지 둘을 비례로 조정해서 합계 100 유지
   function handleChange(key: keyof MediaRatio, next: number) {
     const others = KEYS.filter((k) => k.key !== key);
@@ -45,7 +46,7 @@ export default function MediaRatioSlider({ value, onChange }: Props) {
   const total = value.ai_image + value.stock_photo + value.stock_video;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className={`flex flex-col gap-3 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
       <div className="flex items-center justify-between">
         <label className="text-sm font-semibold text-gray-700">미디어 비율 설정</label>
         {total !== 100 && (

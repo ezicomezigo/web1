@@ -37,6 +37,13 @@ export default function Home() {
   async function handleAnalyze() {
     if (!script.trim()) { setError("대본을 입력해주세요."); return; }
     if (!project) { setError("먼저 프로젝트를 만들거나 열어주세요."); return; }
+
+    if (scenes.length > 0) {
+      if (!confirm(`현재 ${scenes.length}개의 장면이 있습니다.\n새로 분석하면 기존 장면이 모두 삭제됩니다. 계속하시겠습니까?`)) return;
+      setScenes([]);
+      setAnalysisInfo(null);
+    }
+
     setLoading(true);
     setError(null);
 
@@ -167,10 +174,11 @@ export default function Home() {
             <AISelector
               provider={provider}
               geminiModel={geminiModel}
+              disabled={loading}
               onProviderChange={setProvider}
               onGeminiModelChange={setGeminiModel}
             />
-            <MediaRatioSlider value={mediaRatio} onChange={setMediaRatio} />
+            <MediaRatioSlider value={mediaRatio} onChange={setMediaRatio} disabled={loading} />
 
             {error && (
               <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5">
@@ -201,6 +209,7 @@ export default function Home() {
               warnings={analysisInfo.warnings}
               aiProvider={analysisInfo.ai_provider}
               modelUsed={analysisInfo.model_used}
+              disabled={loading}
             />
           </div>
         )}
