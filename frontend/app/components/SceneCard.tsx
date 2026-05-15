@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Scene, MediaType, MoodType } from "../types";
+import { Scene, MediaPlan, MediaType, MoodType } from "../types";
 import { estimateDuration } from "../utils/sceneOps";
+import MediaPlanEditor from "./MediaPlanEditor";
 import {
   GripVertical, Pencil, Check, X, Scissors,
-  MergeIcon, Trash2, Plus, Sparkles, Image, Video,
+  Trash2, Plus, Sparkles, Image, Video,
   ChevronUp, ChevronDown,
 } from "lucide-react";
 
@@ -15,7 +16,7 @@ interface Props {
   scene: Scene;
   index: number;
   total: number;
-  onUpdate: (text: string, topicSummary: string) => void;
+  onUpdate: (text: string, topicSummary: string, media: MediaPlan) => void;
   onSplit: () => void;
   onMerge: (dir: "up" | "down") => void;
   onDelete: () => void;
@@ -46,6 +47,7 @@ export default function SceneCard({
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(scene.text);
   const [draftTopic, setDraftTopic] = useState(scene.topic_summary);
+  const [draftMedia, setDraftMedia] = useState<MediaPlan>(scene.media);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: scene.scene_id });
@@ -60,16 +62,21 @@ export default function SceneCard({
   const media = MEDIA_CONFIG[scene.media.media_type];
   const MediaIcon = media.Icon;
 
+  function startEdit() {
+    setDraftText(scene.text);
+    setDraftTopic(scene.topic_summary);
+    setDraftMedia(scene.media);
+    setEditing(true);
+  }
+
   function saveEdit() {
     if (draftText.trim()) {
-      onUpdate(draftText.trim(), draftTopic.trim() || scene.topic_summary);
+      onUpdate(draftText.trim(), draftTopic.trim() || scene.topic_summary, draftMedia);
     }
     setEditing(false);
   }
 
   function cancelEdit() {
-    setDraftText(scene.text);
-    setDraftTopic(scene.topic_summary);
     setEditing(false);
   }
 
@@ -81,7 +88,6 @@ export default function SceneCard({
 
         {/* 헤더 */}
         <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-          {/* 드래그 핸들 */}
           <button
             {...attributes}
             {...listeners}
@@ -89,13 +95,9 @@ export default function SceneCard({
           >
             <GripVertical size={16} />
           </button>
-
-          {/* 장면 번호 */}
           <span className="w-6 h-6 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold shrink-0">
             {scene.scene_id}
           </span>
-
-          {/* 주제 요약 */}
           {editing ? (
             <input
               value={draftTopic}
@@ -106,8 +108,6 @@ export default function SceneCard({
           ) : (
             <p className="flex-1 text-sm font-medium text-gray-700 truncate">{scene.topic_summary}</p>
           )}
-
-          {/* mood + duration */}
           <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 shrink-0">
             {MOOD_LABEL[scene.media.mood]}
           </span>
@@ -133,23 +133,29 @@ export default function SceneCard({
           )}
         </div>
 
-        {/* 미디어 기획 */}
-        <div className={`mx-4 mb-3 rounded-lg border px-3 py-2 ${media.color}`}>
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <MediaIcon size={12} />
-            <span className="text-xs font-semibold">{media.label}</span>
+        {/* 미디어 기획 — 편집 모드에서는 편집기로 전환 */}
+        {editing ? (
+          <div className="mx-4 mb-3 border border-gray-100 rounded-xl p-3">
+            <MediaPlanEditor value={draftMedia} onChange={setDraftMedia} />
           </div>
-          {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
-            <p className="text-xs font-mono opacity-75 leading-relaxed">{scene.media.ai_image_prompt}</p>
-          )}
-          {scene.media.stock_keywords && (
-            <div className="flex flex-wrap gap-1">
-              {scene.media.stock_keywords.map(kw => (
-                <span key={kw} className="text-xs bg-white/60 rounded px-1.5 py-0.5 border border-current/20">{kw}</span>
-              ))}
+        ) : (
+          <div className={`mx-4 mb-3 rounded-lg border px-3 py-2 ${media.color}`}>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <MediaIcon size={12} />
+              <span className="text-xs font-semibold">{media.label}</span>
             </div>
-          )}
-        </div>
+            {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
+              <p className="text-xs font-mono opacity-75 leading-relaxed">{scene.media.ai_image_prompt}</p>
+            )}
+            {scene.media.stock_keywords && (
+              <div className="flex flex-wrap gap-1">
+                {scene.media.stock_keywords.map(kw => (
+                  <span key={kw} className="text-xs bg-white/60 rounded px-1.5 py-0.5 border border-current/20">{kw}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 액션 버튼 */}
         <div className="flex items-center gap-1 px-4 pb-3 border-t border-gray-50 pt-2">
@@ -164,42 +170,22 @@ export default function SceneCard({
             </>
           ) : (
             <>
-              <button
-                onClick={() => { setDraftText(scene.text); setDraftTopic(scene.topic_summary); setEditing(true); }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100"
-                title="텍스트 편집"
-              >
+              <button onClick={startEdit} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100" title="편집">
                 <Pencil size={12} /> 편집
               </button>
-              <button
-                onClick={onSplit}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100"
-                title="장면 나누기"
-              >
+              <button onClick={onSplit} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100" title="나누기">
                 <Scissors size={12} /> 나누기
               </button>
-              <button
-                onClick={() => onMerge("up")}
-                disabled={index === 0}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                title="위 장면과 합치기"
-              >
+              <button onClick={() => onMerge("up")} disabled={index === 0}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">
                 <ChevronUp size={12} /> 위와 합치기
               </button>
-              <button
-                onClick={() => onMerge("down")}
-                disabled={index === total - 1}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                title="아래 장면과 합치기"
-              >
+              <button onClick={() => onMerge("down")} disabled={index === total - 1}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">
                 <ChevronDown size={12} /> 아래와 합치기
               </button>
               <div className="flex-1" />
-              <button
-                onClick={onDelete}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-50"
-                title="장면 삭제"
-              >
+              <button onClick={onDelete} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-red-400 hover:bg-red-50">
                 <Trash2 size={12} /> 삭제
               </button>
             </>
@@ -207,16 +193,13 @@ export default function SceneCard({
         </div>
       </div>
 
-      {/* 아래에 장면 추가 버튼 */}
+      {/* 아래에 장면 추가 */}
       <button
         onClick={onAddAfter}
         className="w-full flex items-center justify-center gap-1 py-1 text-gray-300 hover:text-indigo-500 transition-colors group/add"
-        title="이 아래에 장면 추가"
       >
         <div className="h-px flex-1 bg-gray-100 group-hover/add:bg-indigo-200 transition-colors" />
-        <span className="flex items-center gap-0.5 text-xs px-2 shrink-0">
-          <Plus size={11} /> 장면 추가
-        </span>
+        <span className="flex items-center gap-0.5 text-xs px-2 shrink-0"><Plus size={11} /> 장면 추가</span>
         <div className="h-px flex-1 bg-gray-100 group-hover/add:bg-indigo-200 transition-colors" />
       </button>
     </div>

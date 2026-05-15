@@ -8,7 +8,7 @@ import {
 import {
   SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
-import { Scene } from "../types";
+import { Scene, MediaPlan } from "../types";
 import { renumber, estimateDuration, DEFAULT_MEDIA } from "../utils/sceneOps";
 import SceneCard from "./SceneCard";
 import SplitSceneModal from "./SplitSceneModal";
@@ -45,10 +45,10 @@ export default function SceneEditor({ scenes, onChange, warnings, aiProvider, mo
     onChange(renumber(arrayMove(scenes, oldIdx, newIdx)));
   }
 
-  // ─── 텍스트 편집 ─────────────────────────────────────────────────────────
-  function handleUpdate(index: number, text: string, topicSummary: string) {
+  // ─── 텍스트+미디어 편집 ──────────────────────────────────────────────────
+  function handleUpdate(index: number, text: string, topicSummary: string, media: MediaPlan) {
     onChange(scenes.map((s, i) =>
-      i === index ? { ...s, text, topic_summary: topicSummary, estimated_duration: estimateDuration(text) } : s
+      i === index ? { ...s, text, topic_summary: topicSummary, estimated_duration: estimateDuration(text), media } : s
     ));
   }
 
@@ -81,15 +81,15 @@ export default function SceneEditor({ scenes, onChange, warnings, aiProvider, mo
   }
 
   // ─── 추가 ────────────────────────────────────────────────────────────────
-  function handleAdd(text: string) {
+  function handleAdd(text: string, media: MediaPlan) {
     if (addAfterIndex === null) return;
-    const insertAt = addAfterIndex + 1; // -1 → 0(맨앞), N → N+1
+    const insertAt = addAfterIndex + 1;
     const newScene: Scene = {
       scene_id: 0,
       text,
       topic_summary: "새 장면",
       estimated_duration: estimateDuration(text),
-      media: { ...DEFAULT_MEDIA },
+      media,
     };
     onChange(renumber([...scenes.slice(0, insertAt), newScene, ...scenes.slice(insertAt)]));
     setAddAfterIndex(null);
@@ -145,7 +145,7 @@ export default function SceneEditor({ scenes, onChange, warnings, aiProvider, mo
               scene={scene}
               index={index}
               total={scenes.length}
-              onUpdate={(text, topic) => handleUpdate(index, text, topic)}
+              onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
               onSplit={() => setSplitTarget(index)}
               onMerge={(dir) => handleMerge(index, dir)}
               onDelete={() => handleDelete(index)}
