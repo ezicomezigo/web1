@@ -42,7 +42,17 @@ async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
     let detail = `HTTP ${res.status}`;
     try {
       const body = await res.json();
-      detail = body.detail ?? JSON.stringify(body);
+      if (typeof body.detail === "string") {
+        detail = body.detail;
+      } else if (Array.isArray(body.detail)) {
+        detail = body.detail
+          .map((e: { loc?: string[]; msg?: string }) =>
+            `${(e.loc ?? []).slice(1).join(".")}: ${e.msg ?? "오류"}`
+          )
+          .join("; ");
+      } else {
+        detail = JSON.stringify(body);
+      }
     } catch {}
     throw new Error(detail);
   }
