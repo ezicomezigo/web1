@@ -20,7 +20,7 @@ const PROVIDER_LABELS: Record<TTSProvider, string> = {
 };
 
 export default function TTSSettings({ value, onChange, disabled = false }: Props) {
-  const [customVoice, setCustomVoice] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
 
   function set(patch: Partial<TTSSettings>) {
     onChange({ ...value, ...patch });
@@ -111,11 +111,13 @@ export default function TTSSettings({ value, onChange, disabled = false }: Props
         ) : (
           <div className="flex flex-col gap-2">
             <select
-              value={MINIMAX_PRESET_VOICES.some(p => p.id === value.voice) ? value.voice : "__custom__"}
+              value={showCustom ? "__custom__" : value.voice}
               onChange={e => {
-                if (e.target.value !== "__custom__") {
+                if (e.target.value === "__custom__") {
+                  setShowCustom(true);
+                } else {
+                  setShowCustom(false);
                   set({ voice: e.target.value });
-                  setCustomVoice("");
                 }
               }}
               className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -125,12 +127,13 @@ export default function TTSSettings({ value, onChange, disabled = false }: Props
               ))}
               <option value="__custom__">직접 입력...</option>
             </select>
-            {(!MINIMAX_PRESET_VOICES.some(p => p.id === value.voice) || customVoice) && (
+            {showCustom && (
               <input
-                value={customVoice || value.voice}
-                onChange={e => { setCustomVoice(e.target.value); set({ voice: e.target.value }); }}
-                placeholder="voice_id 직접 입력"
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                autoFocus
+                value={value.voice}
+                onChange={e => set({ voice: e.target.value })}
+                placeholder="voice_id 직접 입력 (예: Calm_Woman)"
+                className="border border-indigo-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
             )}
           </div>
