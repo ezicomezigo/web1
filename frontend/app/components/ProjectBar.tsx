@@ -8,6 +8,7 @@ interface Props {
   isDirty: boolean;
   isSaving: boolean;
   lastSavedAt: string | null;
+  isAnalyzing?: boolean;
   onOpenList: () => void;
   onSave: () => void;
   onRenameInline: (name: string) => void;
@@ -20,8 +21,9 @@ function formatTime(iso: string) {
 }
 
 export default function ProjectBar({
-  projectName, isDirty, isSaving, lastSavedAt, onOpenList, onSave, onRenameInline,
+  projectName, isDirty, isSaving, lastSavedAt, isAnalyzing = false, onOpenList, onSave, onRenameInline,
 }: Props) {
+  const blocked = isAnalyzing || isSaving;
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(projectName ?? "");
 
@@ -36,8 +38,8 @@ export default function ProjectBar({
     <div className="flex items-center justify-between bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm mb-6">
       {/* 프로젝트 이름 */}
       <div className="flex items-center gap-2 min-w-0">
-        <button onClick={onOpenList}
-          className="flex items-center gap-1.5 text-gray-400 hover:text-indigo-600 shrink-0 transition-colors">
+        <button onClick={onOpenList} disabled={blocked}
+          className="flex items-center gap-1.5 text-gray-400 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 transition-colors">
           <FolderOpen size={16} />
         </button>
 
@@ -52,7 +54,7 @@ export default function ProjectBar({
           />
         ) : (
           <button
-            onClick={() => { if (projectName) { setNameValue(projectName); setEditingName(true); } else onOpenList(); }}
+            onClick={() => { if (blocked) return; if (projectName) { setNameValue(projectName); setEditingName(true); } else onOpenList(); }}
             className="flex items-center gap-1 text-sm font-semibold text-gray-800 hover:text-indigo-700 truncate max-w-xs transition-colors"
           >
             {projectName ?? <span className="text-gray-400 font-normal">프로젝트 없음</span>}
@@ -78,7 +80,7 @@ export default function ProjectBar({
         {projectName && (
           <button
             onClick={onSave}
-            disabled={isSaving || !isDirty}
+            disabled={blocked || !isDirty}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40 transition-colors"
           >
             {isSaving
@@ -88,8 +90,8 @@ export default function ProjectBar({
           </button>
         )}
 
-        <button onClick={onOpenList}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs hover:bg-gray-50 transition-colors">
+        <button onClick={onOpenList} disabled={blocked}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
           <FolderOpen size={12} /> 프로젝트
         </button>
       </div>

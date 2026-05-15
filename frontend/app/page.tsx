@@ -89,6 +89,7 @@ export default function Home() {
           isDirty={isDirty}
           isSaving={isSaving}
           lastSavedAt={lastSavedAt}
+          isAnalyzing={loading}
           onOpenList={() => setShowProjects(true)}
           onSave={saveProject}
           onRenameInline={(name) => renameProject(project!.id, name)}
