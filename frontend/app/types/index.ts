@@ -21,6 +21,7 @@ export interface AnalyzeResponse {
   total_scenes: number;
   ai_provider: string;
   model_used: string;
+  warnings: string[];
 }
 
 export interface AnalyzeRequest {

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnalyzeResponse } from "../types";
-import { Clock, Film } from "lucide-react";
+import { Clock, Film, AlertTriangle, CheckCircle } from "lucide-react";
 
 interface Props {
   result: AnalyzeResponse;
@@ -33,6 +33,24 @@ export default function SceneList({ result }: Props) {
           {result.ai_provider === "claude" ? "Claude" : "Gemini"} · {result.model_used}
         </span>
       </div>
+
+      {/* 원본 텍스트 검증 결과 */}
+      {result.warnings.length === 0 ? (
+        <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 text-sm">
+          <CheckCircle size={15} />
+          원본 텍스트가 100% 보존되었습니다.
+        </div>
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex flex-col gap-1.5">
+          <div className="flex items-center gap-2 text-amber-700 font-semibold text-sm">
+            <AlertTriangle size={15} />
+            원본 텍스트 커버리지 경고
+          </div>
+          {result.warnings.map((w, i) => (
+            <p key={i} className="text-xs text-amber-700 pl-5">{w}</p>
+          ))}
+        </div>
+      )}
 
       {/* 장면 목록 */}
       {result.scenes.map((scene) => (
