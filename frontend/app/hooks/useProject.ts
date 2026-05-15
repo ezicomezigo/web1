@@ -78,7 +78,18 @@ export function useProject(): UseProjectReturn {
     } else {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
-        try { setDraft(JSON.parse(raw)); } catch {}
+        try {
+          const parsed = JSON.parse(raw);
+          // 구버전 draft는 analysisInfo가 camelCase일 수 있음 → snake_case로 정규화
+          if (parsed.analysisInfo && !parsed.analysisInfo.ai_provider) {
+            parsed.analysisInfo = {
+              ai_provider: parsed.analysisInfo.aiProvider ?? "",
+              model_used: parsed.analysisInfo.modelUsed ?? "",
+              warnings: parsed.analysisInfo.warnings ?? [],
+            };
+          }
+          setDraft(parsed);
+        } catch {}
       }
     }
   }, []);
