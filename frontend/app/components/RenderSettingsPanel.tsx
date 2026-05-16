@@ -7,21 +7,39 @@ interface Props {
   onChange: (next: RenderSettings) => void;
 }
 
+const FONT_PRESETS = [
+  { label: "기본 (플랫폼 한글)", value: null },
+  { label: "주아체", value: "Jua" },
+  { label: "나눔고딕", value: "NanumGothic" },
+  { label: "나눔바른고딕", value: "NanumBarunGothic" },
+  { label: "Malgun Gothic (Windows)", value: "Malgun Gothic" },
+  { label: "Apple SD Gothic Neo (macOS)", value: "Apple SD Gothic Neo" },
+  { label: "Noto Sans CJK KR (Linux)", value: "Noto Sans CJK KR" },
+];
+
 export default function RenderSettingsPanel({ value, onChange }: Props) {
+  const currentPreset = FONT_PRESETS.find(p => p.value === value.subtitle_font_name);
+  const isCustom = !currentPreset;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+        {/* 폰트 크기 */}
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-gray-600">자막 폰트 크기 (px)</span>
-          <input
-            type="number"
-            min={10}
-            max={120}
-            step={1}
-            value={value.subtitle_font_size}
-            onChange={e => onChange({ ...value, subtitle_font_size: Number(e.target.value) || 22 })}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={10}
+              max={120}
+              step={1}
+              value={value.subtitle_font_size}
+              onChange={e => onChange({ ...value, subtitle_font_size: Number(e.target.value) || 22 })}
+              className="w-20 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+            <span className="text-xs text-gray-400">px</span>
+          </div>
           <input
             type="range"
             min={14}
@@ -33,40 +51,60 @@ export default function RenderSettingsPanel({ value, onChange }: Props) {
           />
         </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-gray-600">자막 폰트 (선택)</span>
-          <input
-            type="text"
-            placeholder="기본: 플랫폼 한글 폰트"
-            value={value.subtitle_font_name ?? ""}
-            onChange={e => onChange({
-              ...value,
-              subtitle_font_name: e.target.value.trim() ? e.target.value : null,
-            })}
+        {/* 폰트 선택 */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-gray-600">자막 폰트</span>
+          <select
+            value={isCustom ? "__custom__" : (value.subtitle_font_name ?? "__default__")}
+            onChange={e => {
+              const v = e.target.value;
+              if (v === "__default__") onChange({ ...value, subtitle_font_name: null });
+              else if (v === "__custom__") onChange({ ...value, subtitle_font_name: value.subtitle_font_name ?? "" });
+              else onChange({ ...value, subtitle_font_name: v });
+            }}
             className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-          <span className="text-[10px] text-gray-400 leading-tight">
-            예: Malgun Gothic, Apple SD Gothic Neo, Noto Sans CJK KR
-          </span>
-        </label>
+          >
+            {FONT_PRESETS.map(p => (
+              <option key={p.value ?? "__default__"} value={p.value ?? "__default__"}>
+                {p.label}
+              </option>
+            ))}
+            <option value="__custom__">직접 입력...</option>
+          </select>
+          {isCustom && (
+            <input
+              type="text"
+              placeholder="폰트명 직접 입력"
+              value={value.subtitle_font_name ?? ""}
+              onChange={e => onChange({ ...value, subtitle_font_name: e.target.value.trim() || null })}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 mt-1"
+              autoFocus
+            />
+          )}
+        </div>
 
+        {/* 외곽선 */}
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-gray-600">외곽선 두께</span>
-          <input
-            type="number"
-            min={0}
-            max={6}
-            step={1}
-            value={value.subtitle_outline}
-            onChange={e => onChange({ ...value, subtitle_outline: Math.max(0, Number(e.target.value) || 0) })}
-            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              max={6}
+              step={1}
+              value={value.subtitle_outline}
+              onChange={e => onChange({ ...value, subtitle_outline: Math.max(0, Number(e.target.value) || 0) })}
+              className="w-20 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
         </label>
+
       </div>
 
       <p className="text-xs text-gray-500 leading-relaxed bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
         폰트 크기를 키우면 자동으로 한 줄에 맞춰 자막이 분할됩니다.
-        분할된 조각들은 원래 큐의 시간 구간 안에서 글자수에 비례해 순차적으로 표시됩니다.
+        각 조각은 원래 큐의 시간 구간 안에서 글자수에 비례해 순차 표시됩니다.
+        <strong className="text-gray-600"> 주아체 사용 시 PC에 해당 폰트가 설치되어 있어야 합니다.</strong>
       </p>
     </div>
   );

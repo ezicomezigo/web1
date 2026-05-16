@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 OUTPUT_WIDTH = 1920
 OUTPUT_HEIGHT = 1080
 
-# 가로 폭 대비 사용 가능한 자막 영역 비율 (양쪽 여백 약 7.5%씩)
-SUBTITLE_USABLE_WIDTH_RATIO = 0.85
+# 가로 폭 대비 사용 가능한 자막 영역 비율 (양쪽 여백 약 10%씩, 보수적)
+SUBTITLE_USABLE_WIDTH_RATIO = 0.78
 
 # CJK(전각) 문자 폭은 font_size 와 거의 동일하다고 가정.
 # 라틴 문자/공백은 평균적으로 좁아서 약 0.55 배 정도.
@@ -190,7 +190,8 @@ def _subtitle_style(settings: RenderSettings) -> str:
         "PrimaryColour=&H00FFFFFF,"
         "OutlineColour=&H00000000,"
         f"Outline={settings.subtitle_outline},"
-        "Alignment=2"
+        "Alignment=2,"
+        "WrapStyle=2"   # 자동 줄바꿈 비활성화 — 한 큐가 한 줄로만 표시됨
     )
 
 
