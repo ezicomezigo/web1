@@ -56,14 +56,35 @@ export default function SceneEditor({
 
   // ─── 전체 오디오 일괄 생성 (순차 호출로 진행 상황 표시) ──────────────────
   async function handleBatchGenerate() {
-    if (!confirm(`${scenes.length}개 장면의 오디오를 모두 생성합니다. 계속하시겠습니까?`)) return;
+    const existing = scenes.filter(s => s.assets?.audio).length;
+    const missing = scenes.length - existing;
+    let targets: typeof scenes;
+
+    if (existing === 0) {
+      if (!confirm(`${scenes.length}개 장면의 오디오를 생성합니다. 계속하시겠습니까?`)) return;
+      targets = scenes;
+    } else if (missing === 0) {
+      if (!confirm(`모든 장면(${scenes.length}개)에 이미 오디오가 있습니다.\n전체 다시 생성하시겠습니까?`)) return;
+      targets = scenes;
+    } else {
+      const choice = window.prompt(
+        `기존 오디오: ${existing}개 / 미생성: ${missing}개\n\n` +
+        `1: 전체 다시 생성 (${scenes.length}개)\n` +
+        `2: 미생성 장면만 생성 (${missing}개)\n\n` +
+        `숫자를 입력하세요 (1 또는 2):`,
+        "2"
+      );
+      if (choice !== "1" && choice !== "2") return;
+      targets = choice === "1" ? scenes : scenes.filter(s => !s.assets?.audio);
+    }
+
     setBatchLoading(true);
     setBatchErrors([]);
     const errors: { sceneId: number; error: string }[] = [];
     try {
-      for (let i = 0; i < scenes.length; i++) {
-        const sc = scenes[i];
-        setBatchProgress({ current: i + 1, total: scenes.length, sceneId: sc.scene_id });
+      for (let i = 0; i < targets.length; i++) {
+        const sc = targets[i];
+        setBatchProgress({ current: i + 1, total: targets.length, sceneId: sc.scene_id });
         try {
           const res = await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${sc.scene_id}/audio`, {
             method: "POST",
