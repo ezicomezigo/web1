@@ -294,6 +294,7 @@ export default function Home() {
                 disabled={loading}
                 projectId={project.id}
                 ttsSettings={ttsSettings}
+                imageStyle={imageStyle}
               />
             </div>
           </div>

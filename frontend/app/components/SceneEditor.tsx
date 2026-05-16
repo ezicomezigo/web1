@@ -26,10 +26,11 @@ interface Props {
   disabled?: boolean;
   projectId: string;
   ttsSettings: TTSSettings;
+  imageStyle: string;
 }
 
 export default function SceneEditor({
-  scenes, onChange, warnings, aiProvider, modelUsed, disabled = false, projectId, ttsSettings,
+  scenes, onChange, warnings, aiProvider, modelUsed, disabled = false, projectId, ttsSettings, imageStyle,
 }: Props) {
   const [splitTarget, setSplitTarget] = useState<number | null>(null);
   const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null);
@@ -281,6 +282,7 @@ export default function SceneEditor({
               projectId={projectId}
               ttsSettings={ttsSettings}
               batchMode={batchLoading ? batchMode : null}
+              imageStyle={imageStyle}
               onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
               onAudioUpdate={handleAudioUpdate}
               onVisualUpdate={handleVisualUpdate}

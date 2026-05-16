@@ -6,10 +6,11 @@ import { CSS } from "@dnd-kit/utilities";
 import { Scene, MediaPlan, MediaType, MoodType, TTSSettings } from "../types";
 import { estimateDuration } from "../utils/sceneOps";
 import MediaPlanEditor from "./MediaPlanEditor";
+import StockSearchModal from "./StockSearchModal";
 import {
   GripVertical, Pencil, Check, X, Scissors,
   Trash2, Plus, Sparkles, Image, Video,
-  ChevronUp, ChevronDown, Mic2, Loader2, Play, RotateCcw, Trash, Upload, Copy,
+  ChevronUp, ChevronDown, Mic2, Loader2, Play, RotateCcw, Trash, Upload, Copy, Search as SearchIcon,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -21,6 +22,7 @@ interface Props {
   projectId: string;
   ttsSettings: TTSSettings;
   batchMode: "all" | "missing" | null;
+  imageStyle: string;
   onUpdate: (text: string, topicSummary: string, media: MediaPlan) => void;
   onAudioUpdate: (sceneId: number, audioPath: string | null, duration: number) => void;
   onVisualUpdate: (sceneId: number, visualPath: string | null) => void;
@@ -48,7 +50,7 @@ function durationColor(sec: number) {
 }
 
 export default function SceneCard({
-  scene, index, total, projectId, ttsSettings, batchMode,
+  scene, index, total, projectId, ttsSettings, batchMode, imageStyle,
   onUpdate, onAudioUpdate, onVisualUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -59,6 +61,7 @@ export default function SceneCard({
   const [audioError, setAudioError] = useState<string | null>(null);
   const [visualUploading, setVisualUploading] = useState(false);
   const [visualError, setVisualError] = useState<string | null>(null);
+  const [showStockSearch, setShowStockSearch] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -149,9 +152,10 @@ export default function SceneCard({
   }
 
   function copyImagePrompt() {
-    if (scene.media.ai_image_prompt) {
-      navigator.clipboard.writeText(scene.media.ai_image_prompt);
-    }
+    const base = scene.media.ai_image_prompt?.trim() ?? "";
+    if (!base) return;
+    const full = imageStyle.trim() ? `${base}, ${imageStyle.trim()}` : base;
+    navigator.clipboard.writeText(full);
   }
 
   const audioUrl = scene.assets?.audio
@@ -343,23 +347,23 @@ export default function SceneCard({
                     : <Image size={12} className="text-gray-400 shrink-0" />}
                 <span className="text-xs text-gray-400 flex-1">
                   비주얼 없음
-                  {scene.media.media_type === "ai_image" && " · AI 이미지 외부 생성 후 업로드"}
-                  {scene.media.media_type === "stock_photo" && " · 스톡 사진 (검색 예정)"}
-                  {scene.media.media_type === "stock_video" && " · 스톡 영상 (검색 예정)"}
+                  {scene.media.media_type === "ai_image" && " · 외부 생성 후 업로드"}
                 </span>
                 {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
-                  <button
-                    onClick={copyImagePrompt}
+                  <button onClick={copyImagePrompt}
                     className="flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-600"
-                    title="이미지 프롬프트 복사"
-                  >
+                    title="이미지 프롬프트 복사 (스타일 포함)">
                     <Copy size={11} /> 프롬프트
                   </button>
                 )}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={visualUploading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
+                {(scene.media.media_type === "stock_photo" || scene.media.media_type === "stock_video") && (
+                  <button onClick={() => setShowStockSearch(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700">
+                    <SearchIcon size={11} /> 스톡 검색
+                  </button>
+                )}
+                <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                 >
                   {visualUploading
                     ? <><Loader2 size={11} className="animate-spin" /> 업로드 중...</>
@@ -421,6 +425,17 @@ export default function SceneCard({
         <span className="flex items-center gap-0.5 text-xs px-2 shrink-0"><Plus size={11} /> 장면 추가</span>
         <div className="h-px flex-1 bg-gray-100 group-hover/add:bg-indigo-200 transition-colors" />
       </button>
+
+      {showStockSearch && (
+        <StockSearchModal
+          projectId={projectId}
+          sceneId={scene.scene_id}
+          keywords={scene.media.stock_keywords ?? []}
+          defaultMediaType={scene.media.media_type === "stock_video" ? "video" : "photo"}
+          onSelect={path => { onVisualUpdate(scene.scene_id, path); setShowStockSearch(false); }}
+          onClose={() => setShowStockSearch(false)}
+        />
+      )}
     </div>
   );
 }
