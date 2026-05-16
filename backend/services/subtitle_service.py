@@ -215,7 +215,7 @@ def correct_cues_with_script(cues: list[SubtitleCue], script_text: str) -> list[
     return result
 
 
-
+def cues_to_srt(cues: list[SubtitleCue], start_index: int = 1) -> str:
     """SubtitleCue 배열을 SRT 문자열로 변환."""
     lines: list[str] = []
     for i, cue in enumerate(cues, start=start_index):
