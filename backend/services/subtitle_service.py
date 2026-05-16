@@ -139,7 +139,83 @@ def _group_words_to_cues(words: list[tuple[float, float, str]]) -> list[Subtitle
     return cues
 
 
-def cues_to_srt(cues: list[SubtitleCue], start_index: int = 1) -> str:
+def correct_cues_with_script(cues: list[SubtitleCue], script_text: str) -> list[SubtitleCue]:
+    """Whisper 인식 오류를 원본 스크립트 텍스트로 교정한다.
+
+    타임스탬프는 Whisper 것을 그대로 유지하고, 텍스트만 스크립트로 교체한다.
+    difflib.SequenceMatcher로 단어 단위 정렬 후 스크립트 단어를 해당 큐에 배분.
+    """
+    from difflib import SequenceMatcher
+
+    # 스크립트 단어 목록 (문장부호 포함 그대로)
+    script_words = script_text.split()
+    if not script_words:
+        return cues
+
+    # Whisper 단어 목록 + 각 단어가 속한 큐 인덱스
+    ww_to_cue: list[tuple[str, int]] = []
+    for ci, cue in enumerate(cues):
+        for w in cue.text.strip().split():
+            ww_to_cue.append((w, ci))
+
+    if not ww_to_cue:
+        return cues
+
+    whisper_words = [w for w, _ in ww_to_cue]
+
+    # 단어 단위 정렬
+    sm = SequenceMatcher(None, whisper_words, script_words, autojunk=False)
+    opcodes = sm.get_opcodes()
+
+    # 큐별 교정 단어 버킷
+    corrected: dict[int, list[str]] = {i: [] for i in range(len(cues))}
+
+    def _ci(ww_idx: int) -> int:
+        """whisper 단어 인덱스 → 큐 인덱스 (범위 초과 시 마지막 큐)."""
+        if ww_idx < len(ww_to_cue):
+            return ww_to_cue[ww_idx][1]
+        return len(cues) - 1
+
+    for tag, a1, a2, b1, b2 in opcodes:
+        n_w = a2 - a1   # whisper 쪽 단어 수
+        n_s = b2 - b1   # script 쪽 단어 수
+
+        if tag == "equal":
+            # 동일한 단어 → 스크립트 단어로 덮어쓰기 (대소문자·문장부호 정규화)
+            for k in range(n_w):
+                corrected[_ci(a1 + k)].append(script_words[b1 + k])
+
+        elif tag == "replace":
+            # Whisper N개 단어 ↔ Script M개 단어: 비율로 큐에 배분
+            for k in range(n_w):
+                ci = _ci(a1 + k)
+                s_start = b1 + int(k * n_s / n_w)
+                s_end = b1 + int((k + 1) * n_s / n_w)
+                corrected[ci].extend(script_words[s_start:s_end])
+            # 나머지 스크립트 단어가 있으면 마지막 Whisper 큐에 붙이기
+            assigned = int(n_w * n_s / n_w)
+            for j in range(b1 + assigned, b2):
+                corrected[_ci(a2 - 1)].append(script_words[j])
+
+        elif tag == "delete":
+            # Whisper에만 있는 단어 → 버림 (스크립트에 없는 환각)
+            pass
+
+        elif tag == "insert":
+            # Script에만 있는 단어 → Whisper 인접 큐에 붙이기
+            ci = _ci(a1 - 1) if a1 > 0 else 0
+            corrected[ci].extend(script_words[b1:b2])
+
+    # 빈 큐 처리: 교정 단어가 없으면 원본 Whisper 텍스트 유지
+    result: list[SubtitleCue] = []
+    for i, cue in enumerate(cues):
+        words = corrected[i]
+        text = " ".join(words) if words else cue.text
+        result.append(SubtitleCue(start=cue.start, end=cue.end, text=text.strip()))
+    return result
+
+
+
     """SubtitleCue 배열을 SRT 문자열로 변환."""
     lines: list[str] = []
     for i, cue in enumerate(cues, start=start_index):

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Captions, Trash, RotateCcw, Plus, X } from "lucide-react";
+import { Loader2, Captions, Trash, RotateCcw, Plus, X, Wand2 } from "lucide-react";
 import { SubtitleCue } from "../types";
 
 const API_BASE = "http://localhost:8000";
@@ -24,6 +24,7 @@ export default function SubtitleEditor({
   projectId, sceneId, hasAudio, cues, onChange,
 }: Props) {
   const [loading, setLoading] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -70,6 +71,27 @@ export default function SubtitleEditor({
       setError(e instanceof Error ? e.message : "저장 실패");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function correctWithScript() {
+    setCorrecting(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/projects/${projectId}/scenes/${sceneId}/subtitle/correct`,
+        { method: "POST" },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail ?? `HTTP ${res.status}`);
+      }
+      const data: SubtitleCue[] = await res.json();
+      onChange(sceneId, data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "자막 보정 실패");
+    } finally {
+      setCorrecting(false);
     }
   }
 
@@ -128,7 +150,12 @@ export default function SubtitleEditor({
           {saving && <Loader2 size={11} className="animate-spin text-gray-400" />}
           {cues ? (
             <>
-              <button onClick={generate} disabled={loading}
+              <button onClick={correctWithScript} disabled={correcting || loading}
+                title="대본 텍스트로 인식 오류 교정 (타임스탬프 유지)"
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-600 disabled:opacity-40">
+                {correcting ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />} 보정
+              </button>
+              <button onClick={generate} disabled={loading || correcting}
                 className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
                 {loading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 재생성
               </button>

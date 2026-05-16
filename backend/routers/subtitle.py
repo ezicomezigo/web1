@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from models.schemas import SceneAssets, SubtitleCue
 from routers.projects import load_project, save_project, project_path
-from services.subtitle_service import transcribe_to_cues, cues_to_srt
+from services.subtitle_service import transcribe_to_cues, cues_to_srt, correct_cues_with_script
 
 router = APIRouter(prefix="/api/projects", tags=["subtitle"])
 logger = logging.getLogger(__name__)
@@ -60,6 +60,30 @@ def save_subtitle(project_id: str, scene_id: int, req: SubtitleSaveRequest):
     )
     save_project(project)
     return req.cues
+
+
+@router.post("/{project_id}/scenes/{scene_id}/subtitle/correct", response_model=list[SubtitleCue])
+def correct_subtitle(project_id: str, scene_id: int):
+    """자막 텍스트를 원본 장면 스크립트로 교정한다 (타임스탬프는 유지)."""
+    project = load_project(project_id)
+    idx = next((i for i, s in enumerate(project.scenes) if s.scene_id == scene_id), None)
+    if idx is None:
+        raise HTTPException(404, f"장면 {scene_id}를 찾을 수 없습니다.")
+
+    scene = project.scenes[idx]
+    if not scene.assets.subtitle:
+        raise HTTPException(400, "먼저 자막을 생성하세요.")
+
+    corrected = correct_cues_with_script(scene.assets.subtitle, scene.text)
+
+    project.scenes[idx].assets = SceneAssets(
+        audio=scene.assets.audio,
+        visual=scene.assets.visual,
+        subtitle=corrected,
+        video=scene.assets.video,
+    )
+    save_project(project)
+    return corrected
 
 
 @router.delete("/{project_id}/scenes/{scene_id}/subtitle")
