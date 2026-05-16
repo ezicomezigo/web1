@@ -125,6 +125,14 @@ Project:
 | DELETE | `/api/projects/{id}/scenes/{sid}/audio` | 오디오 삭제 |
 | POST | `/api/projects/{id}/audio/batch` | 전체 장면 일괄 오디오 생성 |
 | GET | `/api/projects/{id}/media/{filename}` | 미디어 파일 서빙 |
+| POST | `/api/projects/{id}/scenes/{sid}/visual/upload` | 비주얼 업로드 |
+| DELETE | `/api/projects/{id}/scenes/{sid}/visual` | 비주얼 삭제 |
+| POST | `/api/projects/{id}/scenes/{sid}/visual/search` | 스톡 미디어 검색 |
+| POST | `/api/projects/{id}/scenes/{sid}/visual/select` | 스톡 미디어 선택·다운로드 |
+| POST | `/api/projects/{id}/scenes/{sid}/subtitle` | 자막 생성 (faster-whisper) |
+| PUT | `/api/projects/{id}/scenes/{sid}/subtitle` | 편집한 자막 큐 저장 |
+| DELETE | `/api/projects/{id}/scenes/{sid}/subtitle` | 자막 삭제 |
+| GET | `/api/projects/{id}/subtitle.srt` | 전체 프로젝트 SRT 다운로드 |
 
 ---
 

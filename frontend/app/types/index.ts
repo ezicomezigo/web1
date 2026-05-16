@@ -17,9 +17,16 @@ export interface MediaPlan {
   mood: MoodType;
 }
 
+export interface SubtitleCue {
+  start: number;
+  end: number;
+  text: string;
+}
+
 export interface SceneAssets {
   audio: string | null;
   visual: string | null;
+  subtitle?: SubtitleCue[] | null;
 }
 
 export interface Scene {

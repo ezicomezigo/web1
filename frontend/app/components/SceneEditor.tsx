@@ -8,12 +8,12 @@ import {
 import {
   SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
-import { Scene, MediaPlan, TTSSettings } from "../types";
+import { Scene, MediaPlan, TTSSettings, SubtitleCue } from "../types";
 import { renumber, estimateDuration, DEFAULT_MEDIA } from "../utils/sceneOps";
 import SceneCard from "./SceneCard";
 import SplitSceneModal from "./SplitSceneModal";
 import AddSceneModal from "./AddSceneModal";
-import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2 } from "lucide-react";
+import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2, Download } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
 
@@ -60,6 +60,14 @@ export default function SceneEditor({
   function handleVisualUpdate(sceneId: number, visualPath: string | null) {
     onChange(prev => prev.map(s => s.scene_id === sceneId
       ? { ...s, assets: { ...(s.assets ?? { audio: null }), visual: visualPath } }
+      : s
+    ));
+  }
+
+  // ─── 자막 업데이트 ──────────────────────────────────────────────────────
+  function handleSubtitleUpdate(sceneId: number, cues: SubtitleCue[] | null) {
+    onChange(prev => prev.map(s => s.scene_id === sceneId
+      ? { ...s, assets: { ...(s.assets ?? { audio: null, visual: null }), subtitle: cues } }
       : s
     ));
   }
@@ -206,6 +214,15 @@ export default function SceneEditor({
         <span className="text-xs text-indigo-400">
           {aiProvider === "claude" ? "Claude" : "Gemini"} · {modelUsed}
         </span>
+        {scenes.some(s => s.assets?.subtitle?.length) && (
+          <a
+            href={`${API_BASE}/api/projects/${projectId}/subtitle.srt`}
+            download={`subtitles-${projectId}.srt`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50"
+          >
+            <Download size={11} /> SRT 다운로드
+          </a>
+        )}
         <button
           onClick={handleBatchGenerate}
           disabled={batchLoading || disabled}
@@ -286,6 +303,7 @@ export default function SceneEditor({
               onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
               onAudioUpdate={handleAudioUpdate}
               onVisualUpdate={handleVisualUpdate}
+              onSubtitleUpdate={handleSubtitleUpdate}
               onSplit={() => setSplitTarget(index)}
               onMerge={(dir) => handleMerge(index, dir)}
               onDelete={() => handleDelete(index)}

@@ -3,10 +3,11 @@
 import { useState, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Scene, MediaPlan, MediaType, MoodType, TTSSettings } from "../types";
+import { Scene, MediaPlan, MediaType, MoodType, TTSSettings, SubtitleCue } from "../types";
 import { estimateDuration } from "../utils/sceneOps";
 import MediaPlanEditor from "./MediaPlanEditor";
 import StockSearchModal from "./StockSearchModal";
+import SubtitleEditor from "./SubtitleEditor";
 import {
   GripVertical, Pencil, Check, X, Scissors,
   Trash2, Plus, Sparkles, Image, Video,
@@ -26,6 +27,7 @@ interface Props {
   onUpdate: (text: string, topicSummary: string, media: MediaPlan) => void;
   onAudioUpdate: (sceneId: number, audioPath: string | null, duration: number) => void;
   onVisualUpdate: (sceneId: number, visualPath: string | null) => void;
+  onSubtitleUpdate: (sceneId: number, cues: SubtitleCue[] | null) => void;
   onSplit: () => void;
   onMerge: (dir: "up" | "down") => void;
   onDelete: () => void;
@@ -51,7 +53,7 @@ function durationColor(sec: number) {
 
 export default function SceneCard({
   scene, index, total, projectId, ttsSettings, batchMode, imageStyle,
-  onUpdate, onAudioUpdate, onVisualUpdate, onSplit, onMerge, onDelete, onAddAfter,
+  onUpdate, onAudioUpdate, onVisualUpdate, onSubtitleUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(scene.text);
@@ -222,7 +224,7 @@ export default function SceneCard({
           <div className="flex items-center gap-1 shrink-0" title="진행 상태: 오디오 · 비주얼 · 자막 · 영상">
             <span className={`w-2 h-2 rounded-full ${audioUrl ? "bg-emerald-500" : "bg-gray-200"}`} title="오디오" />
             <span className={`w-2 h-2 rounded-full ${visualUrl ? "bg-emerald-500" : "bg-gray-200"}`} title="비주얼" />
-            <span className="w-2 h-2 rounded-full bg-gray-200" title="자막 (예정)" />
+            <span className={`w-2 h-2 rounded-full ${scene.assets?.subtitle?.length ? "bg-emerald-500" : "bg-gray-200"}`} title="자막" />
             <span className="w-2 h-2 rounded-full bg-gray-200" title="장면 영상 (예정)" />
           </div>
           {editing ? (
@@ -431,6 +433,15 @@ export default function SceneCard({
             </div>
           )}
         </div>
+
+        {/* 자막 영역 */}
+        <SubtitleEditor
+          projectId={projectId}
+          sceneId={scene.scene_id}
+          hasAudio={!!audioUrl}
+          cues={scene.assets?.subtitle ?? null}
+          onChange={onSubtitleUpdate}
+        />
 
         {/* 액션 버튼 */}
         <div className="flex items-center gap-1 px-4 pb-3 border-t border-gray-50 pt-2">

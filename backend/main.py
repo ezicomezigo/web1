@@ -8,6 +8,7 @@ from routers.projects import router as projects_router
 from routers.tts import router as tts_router
 from routers.visual import router as visual_router
 from routers.stock import router as stock_router
+from routers.subtitle import router as subtitle_router
 
 load_dotenv()
 
@@ -32,6 +33,7 @@ app.include_router(projects_router)
 app.include_router(tts_router)
 app.include_router(visual_router)
 app.include_router(stock_router)
+app.include_router(subtitle_router)
 
 
 @app.get("/health")

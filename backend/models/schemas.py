@@ -27,9 +27,16 @@ class MediaPlan(BaseModel):
     mood: MoodType = "calm"
 
 
+class SubtitleCue(BaseModel):
+    start: float    # 초 단위
+    end: float
+    text: str
+
+
 class SceneAssets(BaseModel):
     audio: str | None = None    # 상대경로: media/scene_1_audio.mp3
     visual: str | None = None   # 상대경로: media/scene_1_image.png
+    subtitle: list[SubtitleCue] | None = None
 
 
 class Scene(BaseModel):
