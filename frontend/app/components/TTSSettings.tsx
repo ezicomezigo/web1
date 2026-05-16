@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   TTSSettings, TTSProvider,
   GEMINI_TTS_MODELS, GEMINI_TTS_VOICES,
@@ -20,8 +19,6 @@ const PROVIDER_LABELS: Record<TTSProvider, string> = {
 };
 
 export default function TTSSettings({ value, onChange, disabled = false }: Props) {
-  const [showCustom, setShowCustom] = useState(false);
-
   function set(patch: Partial<TTSSettings>) {
     onChange({ ...value, ...patch });
   }
@@ -35,6 +32,10 @@ export default function TTSSettings({ value, onChange, disabled = false }: Props
   }
 
   const isGemini = value.provider === "gemini";
+
+  // 현재 저장된 값이 프리셋 목록에 없으면 커스텀 입력 상태로 판단
+  const isCustomModel = !isGemini && !MINIMAX_TTS_MODELS.includes(value.model as typeof MINIMAX_TTS_MODELS[number]);
+  const isCustomVoice = !isGemini && !MINIMAX_PRESET_VOICES.some(v => v.id === value.voice);
 
   return (
     <div className={`flex flex-col gap-4 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
@@ -65,14 +66,30 @@ export default function TTSSettings({ value, onChange, disabled = false }: Props
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-500">모델</label>
           <select
-            value={value.model}
-            onChange={e => set({ model: e.target.value })}
+            value={isCustomModel ? "__custom__" : value.model}
+            onChange={e => {
+              if (e.target.value === "__custom__") {
+                set({ model: "" });
+              } else {
+                set({ model: e.target.value });
+              }
+            }}
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
           >
             {(isGemini ? GEMINI_TTS_MODELS : MINIMAX_TTS_MODELS).map(m => (
               <option key={m} value={m}>{m}</option>
             ))}
+            {!isGemini && <option value="__custom__">직접 입력...</option>}
           </select>
+          {isCustomModel && (
+            <input
+              autoFocus
+              value={value.model}
+              onChange={e => set({ model: e.target.value })}
+              placeholder="모델 ID 직접 입력 (예: speech-02-hd)"
+              className="border border-indigo-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          )}
         </div>
 
         {/* 속도 (MiniMax만) */}
@@ -111,12 +128,11 @@ export default function TTSSettings({ value, onChange, disabled = false }: Props
         ) : (
           <div className="flex flex-col gap-2">
             <select
-              value={showCustom ? "__custom__" : value.voice}
+              value={isCustomVoice ? "__custom__" : value.voice}
               onChange={e => {
                 if (e.target.value === "__custom__") {
-                  setShowCustom(true);
+                  set({ voice: "" });
                 } else {
-                  setShowCustom(false);
                   set({ voice: e.target.value });
                 }
               }}
@@ -127,9 +143,8 @@ export default function TTSSettings({ value, onChange, disabled = false }: Props
               ))}
               <option value="__custom__">직접 입력...</option>
             </select>
-            {showCustom && (
+            {isCustomVoice && (
               <input
-                autoFocus
                 value={value.voice}
                 onChange={e => set({ voice: e.target.value })}
                 placeholder="voice_id 직접 입력 (예: Calm_Woman)"
