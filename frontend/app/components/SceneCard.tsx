@@ -8,6 +8,7 @@ import { estimateDuration } from "../utils/sceneOps";
 import MediaPlanEditor from "./MediaPlanEditor";
 import StockSearchModal from "./StockSearchModal";
 import SubtitleEditor from "./SubtitleEditor";
+import SceneRender from "./SceneRender";
 import {
   GripVertical, Pencil, Check, X, Scissors,
   Trash2, Plus, Sparkles, Image, Video,
@@ -28,6 +29,7 @@ interface Props {
   onAudioUpdate: (sceneId: number, audioPath: string | null, duration: number) => void;
   onVisualUpdate: (sceneId: number, visualPath: string | null) => void;
   onSubtitleUpdate: (sceneId: number, cues: SubtitleCue[] | null) => void;
+  onVideoUpdate: (sceneId: number, videoPath: string | null) => void;
   onSplit: () => void;
   onMerge: (dir: "up" | "down") => void;
   onDelete: () => void;
@@ -53,7 +55,7 @@ function durationColor(sec: number) {
 
 export default function SceneCard({
   scene, index, total, projectId, ttsSettings, batchMode, imageStyle,
-  onUpdate, onAudioUpdate, onVisualUpdate, onSubtitleUpdate, onSplit, onMerge, onDelete, onAddAfter,
+  onUpdate, onAudioUpdate, onVisualUpdate, onSubtitleUpdate, onVideoUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(scene.text);
@@ -225,7 +227,7 @@ export default function SceneCard({
             <span className={`w-2 h-2 rounded-full ${audioUrl ? "bg-emerald-500" : "bg-gray-200"}`} title="오디오" />
             <span className={`w-2 h-2 rounded-full ${visualUrl ? "bg-emerald-500" : "bg-gray-200"}`} title="비주얼" />
             <span className={`w-2 h-2 rounded-full ${scene.assets?.subtitle?.length ? "bg-emerald-500" : "bg-gray-200"}`} title="자막" />
-            <span className="w-2 h-2 rounded-full bg-gray-200" title="장면 영상 (예정)" />
+            <span className={`w-2 h-2 rounded-full ${scene.assets?.video ? "bg-emerald-500" : "bg-gray-200"}`} title="장면 영상" />
           </div>
           {editing ? (
             <input
@@ -433,6 +435,15 @@ export default function SceneCard({
             </div>
           )}
         </div>
+
+        {/* 장면 렌더 영역 */}
+        <SceneRender
+          projectId={projectId}
+          sceneId={scene.scene_id}
+          hasAudio={!!audioUrl}
+          videoPath={scene.assets?.video}
+          onChange={onVideoUpdate}
+        />
 
         {/* 자막 영역 */}
         <SubtitleEditor

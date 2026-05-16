@@ -27,6 +27,7 @@ export interface SceneAssets {
   audio: string | null;
   visual: string | null;
   subtitle?: SubtitleCue[] | null;
+  video?: string | null;
 }
 
 export interface Scene {

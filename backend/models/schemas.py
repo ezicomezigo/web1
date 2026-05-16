@@ -37,6 +37,7 @@ class SceneAssets(BaseModel):
     audio: str | None = None    # 상대경로: media/scene_1_audio.mp3
     visual: str | None = None   # 상대경로: media/scene_1_image.png
     subtitle: list[SubtitleCue] | None = None
+    video: str | None = None    # 상대경로: media/scene_1_render.mp4 (장면별 렌더 결과)
 
 
 class Scene(BaseModel):
