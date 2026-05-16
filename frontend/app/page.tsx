@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AIProvider, AnalyzeResponse, GeminiModel, GEMINI_MODELS, TTSSettings, GEMINI_TTS_MODELS } from "./types";
 import { useProject } from "./hooks/useProject";
 import AISelector from "./components/AISelector";
@@ -10,6 +10,8 @@ import MediaRatioSlider, { MediaRatio } from "./components/MediaRatioSlider";
 import TTSSettingsPanel from "./components/TTSSettings";
 import ProjectBar from "./components/ProjectBar";
 import ProjectListModal from "./components/ProjectListModal";
+import Collapsible from "./components/Collapsible";
+import SceneJumpNav from "./components/SceneJumpNav";
 import { Loader2, Scissors, FolderPlus } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -36,9 +38,27 @@ export default function Home() {
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
 
+  // 접기/펴기 상태 (장면 생성 후 자동 접힘)
+  const [openScript, setOpenScript] = useState(true);
+  const [openAI, setOpenAI] = useState(true);
+  const [openMedia, setOpenMedia] = useState(true);
+  const [openTTS, setOpenTTS] = useState(true);
+
   const script = project?.script ?? "";
   const scenes = project?.scenes ?? [];
   const analysisInfo = project?.analysis_info ?? null;
+
+  // 장면이 0 → 1개 이상으로 처음 바뀔 때 입력/설정 패널 자동 접기
+  const hadScenesRef = useRef(false);
+  useEffect(() => {
+    if (!hadScenesRef.current && scenes.length > 0) {
+      setOpenScript(false);
+      setOpenAI(false);
+      setOpenMedia(false);
+      setOpenTTS(false);
+    }
+    hadScenesRef.current = scenes.length > 0;
+  }, [scenes.length]);
 
   // ─── 분석 ───────────────────────────────────────────────────────────────
   async function handleAnalyze() {
@@ -93,6 +113,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50">
+      <SceneJumpNav scenes={scenes} />
       <div className="max-w-3xl mx-auto px-4 py-10">
 
         {/* 헤더 */}
@@ -180,19 +201,42 @@ export default function Home() {
 
         {/* 입력 패널 (프로젝트 열린 경우만) */}
         {project && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-6 mb-6">
-            <ScriptInput value={script} onChange={setScript} />
-            <AISelector
-              provider={provider}
-              geminiModel={geminiModel}
-              disabled={loading}
-              onProviderChange={setProvider}
-              onGeminiModelChange={setGeminiModel}
-            />
-            <MediaRatioSlider value={mediaRatio} onChange={setMediaRatio} disabled={loading} />
+          <div className="mb-6">
+            <Collapsible
+              title="대본 입력"
+              open={openScript}
+              onToggle={() => setOpenScript(v => !v)}
+              summary={script.trim() ? `${script.trim().slice(0, 40)}${script.length > 40 ? "..." : ""}` : "비어있음"}
+            >
+              <ScriptInput value={script} onChange={setScript} />
+            </Collapsible>
+
+            <Collapsible
+              title="AI 모델 설정"
+              open={openAI}
+              onToggle={() => setOpenAI(v => !v)}
+              summary={provider === "claude" ? "Claude" : `Gemini · ${geminiModel}`}
+            >
+              <AISelector
+                provider={provider}
+                geminiModel={geminiModel}
+                disabled={loading}
+                onProviderChange={setProvider}
+                onGeminiModelChange={setGeminiModel}
+              />
+            </Collapsible>
+
+            <Collapsible
+              title="미디어 비율 설정"
+              open={openMedia}
+              onToggle={() => setOpenMedia(v => !v)}
+              summary={`AI ${mediaRatio.ai_image}% · 사진 ${mediaRatio.stock_photo}% · 영상 ${mediaRatio.stock_video}%`}
+            >
+              <MediaRatioSlider value={mediaRatio} onChange={setMediaRatio} disabled={loading} />
+            </Collapsible>
 
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5">
+              <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5 mb-3">
                 {error}
               </div>
             )}
@@ -212,12 +256,17 @@ export default function Home() {
 
         {/* TTS 설정 + 장면 편집 */}
         {project && analysisInfo && scenes.length > 0 && (
-          <div className="flex flex-col gap-4">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex flex-col gap-2">
+            <Collapsible
+              title="TTS 설정"
+              open={openTTS}
+              onToggle={() => setOpenTTS(v => !v)}
+              summary={`${ttsSettings.provider === "gemini" ? "Gemini" : "MiniMax"} · ${ttsSettings.model} · ${ttsSettings.voice}`}
+            >
               <TTSSettingsPanel value={ttsSettings} onChange={setTtsSettings} disabled={loading} />
-            </div>
+            </Collapsible>
 
-            <div>
+            <div className="mt-2">
               <h2 className="text-lg font-bold text-gray-800 mb-4">장면 편집</h2>
               <SceneEditor
                 scenes={scenes}

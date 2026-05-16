@@ -127,7 +127,7 @@ export default function SceneCard({
   const liveDuration = editing ? estimateDuration(draftText) : scene.estimated_duration;
 
   return (
-    <div ref={setNodeRef} style={style} className="group relative">
+    <div ref={setNodeRef} style={style} id={`scene-${scene.scene_id}`} className="group relative scroll-mt-4">
       <div className={`border rounded-xl bg-white shadow-sm transition-shadow ${isDragging ? "shadow-lg border-indigo-300" : "border-gray-100 hover:shadow-md"}`}>
 
         {/* 헤더 */}
