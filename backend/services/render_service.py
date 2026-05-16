@@ -11,13 +11,21 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from models.schemas import SubtitleCue
+from models.schemas import SubtitleCue, RenderSettings
 from services.subtitle_service import cues_to_srt
 
 logger = logging.getLogger(__name__)
 
 OUTPUT_WIDTH = 1920
 OUTPUT_HEIGHT = 1080
+
+# 가로 폭 대비 사용 가능한 자막 영역 비율 (양쪽 여백 약 7.5%씩)
+SUBTITLE_USABLE_WIDTH_RATIO = 0.85
+
+# CJK(전각) 문자 폭은 font_size 와 거의 동일하다고 가정.
+# 라틴 문자/공백은 평균적으로 좁아서 약 0.55 배 정도.
+# 한국어 위주 자막을 가정하고 1.0 을 기본 계수로 사용.
+SUBTITLE_CHAR_WIDTH_FACTOR = 1.0
 
 
 def check_ffmpeg() -> str:
@@ -58,28 +66,37 @@ def render_scene(
     visual_path: Path | None,
     cues: list[SubtitleCue] | None,
     output_path: Path,
+    settings: RenderSettings | None = None,
 ) -> Path:
     """장면 하나를 렌더링해 output_path 에 mp4로 저장한다."""
     ffmpeg = check_ffmpeg()
+    settings = settings or RenderSettings()
 
     audio_duration = _get_audio_duration(audio_path)
     visual_is_video = visual_path and _is_video(visual_path)
 
+    # 폰트 크기에 맞춰 한 줄에 안 들어가는 큐를 시간 분배로 쪼개기
+    display_cues: list[SubtitleCue] = []
+    if cues:
+        max_chars = _max_chars_per_line(settings.subtitle_font_size)
+        for c in cues:
+            display_cues.extend(_split_cue_for_line_fit(c, max_chars))
+
     # SRT 임시 파일 (자막이 있을 때만)
     srt_tmp: tempfile.NamedTemporaryFile | None = None
     srt_path: Path | None = None
-    if cues:
+    if display_cues:
         srt_tmp = tempfile.NamedTemporaryFile(
             mode="w", suffix=".srt", delete=False,
             encoding="utf-8", dir=output_path.parent,
         )
-        srt_tmp.write(cues_to_srt(cues, start_index=1))
+        srt_tmp.write(cues_to_srt(display_cues, start_index=1))
         srt_tmp.flush()
         srt_tmp.close()
         srt_path = Path(srt_tmp.name)
 
     try:
-        cmd = _build_cmd(ffmpeg, audio_path, visual_path, visual_is_video, srt_path, output_path, audio_duration)
+        cmd = _build_cmd(ffmpeg, audio_path, visual_path, visual_is_video, srt_path, output_path, audio_duration, settings)
         logger.info("Rendering scene %d: %s", scene_id, " ".join(str(c) for c in cmd))
         result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if result.returncode != 0:
@@ -100,7 +117,9 @@ def _build_cmd(
     srt_path: Path | None,
     output_path: Path,
     duration: float | None = None,
+    settings: RenderSettings | None = None,
 ) -> list[str]:
+    settings = settings or RenderSettings()
     cmd: list[str] = [ffmpeg, "-y"]
 
     if visual_path:
@@ -119,7 +138,7 @@ def _build_cmd(
     # 비디오 필터 체인 구성
     vf = _scale_pad_filter()
     if srt_path:
-        vf += f",subtitles='{_escape_path(srt_path)}':force_style='{_subtitle_style()}'"
+        vf += f",subtitles='{_escape_path(srt_path)}':force_style='{_subtitle_style(settings)}'"
 
     if visual_path:
         if visual_is_video:
@@ -153,22 +172,87 @@ def _scale_pad_filter() -> str:
     )
 
 
-def _subtitle_style() -> str:
-    """ASS 스타일 — 한국어 폰트 우선, 흰색 자막, 테두리."""
+def _default_font() -> str:
     if platform.system() == "Windows":
-        font = "Malgun Gothic"
+        return "Malgun Gothic"
     elif platform.system() == "Darwin":
-        font = "Apple SD Gothic Neo"
+        return "Apple SD Gothic Neo"
     else:
-        font = "Noto Sans CJK KR"
+        return "Noto Sans CJK KR"
+
+
+def _subtitle_style(settings: RenderSettings) -> str:
+    """ASS 스타일 — 한국어 폰트 우선, 흰색 자막, 테두리."""
+    font = settings.subtitle_font_name or _default_font()
     return (
         f"FontName={font},"
-        "FontSize=22,"
-        "PrimaryColour=&H00FFFFFF,"   # 흰색
-        "OutlineColour=&H00000000,"   # 검은 테두리
-        "Outline=2,"
-        "Alignment=2"                  # 하단 중앙
+        f"FontSize={settings.subtitle_font_size},"
+        "PrimaryColour=&H00FFFFFF,"
+        "OutlineColour=&H00000000,"
+        f"Outline={settings.subtitle_outline},"
+        "Alignment=2"
     )
+
+
+def _max_chars_per_line(font_size: int) -> int:
+    """1920px 화면에서 한 줄에 들어갈 수 있는 최대 글자수 (한글 기준 보수적 추정)."""
+    usable = OUTPUT_WIDTH * SUBTITLE_USABLE_WIDTH_RATIO
+    char_w = max(1, font_size * SUBTITLE_CHAR_WIDTH_FACTOR)
+    return max(4, int(usable / char_w))
+
+
+def _split_cue_for_line_fit(cue: SubtitleCue, max_chars: int) -> list[SubtitleCue]:
+    """긴 자막 큐를 한 줄에 맞는 여러 큐로 쪼개고, 원래 구간 안에서 시간 비례 배분.
+
+    원본 큐의 [start, end] 구간 내에서만 분배하므로 다른 장면 시간과 충돌하지 않는다.
+    """
+    text = cue.text.strip()
+    if not text or len(text) <= max_chars:
+        return [cue]
+
+    chunks = _chunk_text(text, max_chars)
+    if len(chunks) <= 1:
+        return [cue]
+
+    duration = max(0.0, cue.end - cue.start)
+    total_len = sum(len(c) for c in chunks)
+    if total_len == 0 or duration <= 0:
+        return [cue]
+
+    result: list[SubtitleCue] = []
+    t = cue.start
+    for i, c in enumerate(chunks):
+        if i == len(chunks) - 1:
+            end = cue.end
+        else:
+            end = t + duration * len(c) / total_len
+        result.append(SubtitleCue(start=t, end=end, text=c))
+        t = end
+    return result
+
+
+def _chunk_text(text: str, max_chars: int) -> list[str]:
+    """공백 단위 우선, 필요하면 강제 분할로 max_chars 이하 청크 리스트 반환."""
+    parts = text.split()
+    chunks: list[str] = []
+    current = ""
+    for p in parts:
+        candidate = (current + " " + p) if current else p
+        if len(candidate) <= max_chars:
+            current = candidate
+            continue
+        # 현재 청크 마무리
+        if current:
+            chunks.append(current)
+            current = ""
+        # 단어 자체가 한계를 초과하면 강제 분할
+        while len(p) > max_chars:
+            chunks.append(p[:max_chars])
+            p = p[max_chars:]
+        current = p
+    if current:
+        chunks.append(current)
+    return chunks
 
 
 def _escape_path(path: Path) -> str:

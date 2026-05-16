@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Scene, MediaPlan, MediaType, MoodType, TTSSettings, SubtitleCue } from "../types";
+import { Scene, MediaPlan, MediaType, MoodType, TTSSettings, SubtitleCue, RenderSettings } from "../types";
 import { estimateDuration } from "../utils/sceneOps";
 import MediaPlanEditor from "./MediaPlanEditor";
 import StockSearchModal from "./StockSearchModal";
@@ -25,6 +25,7 @@ interface Props {
   ttsSettings: TTSSettings;
   batchMode: "all" | "missing" | null;
   imageStyle: string;
+  renderSettings: RenderSettings;
   onUpdate: (text: string, topicSummary: string, media: MediaPlan) => void;
   onAudioUpdate: (sceneId: number, audioPath: string | null, duration: number) => void;
   onVisualUpdate: (sceneId: number, visualPath: string | null) => void;
@@ -54,7 +55,7 @@ function durationColor(sec: number) {
 }
 
 export default function SceneCard({
-  scene, index, total, projectId, ttsSettings, batchMode, imageStyle,
+  scene, index, total, projectId, ttsSettings, batchMode, imageStyle, renderSettings,
   onUpdate, onAudioUpdate, onVisualUpdate, onSubtitleUpdate, onVideoUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -426,6 +427,7 @@ export default function SceneCard({
               hasAudio={!!audioUrl}
               videoPath={scene.assets?.video}
               onChange={onVideoUpdate}
+              settings={renderSettings}
               compact
             />
           </div>

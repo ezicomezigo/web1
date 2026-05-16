@@ -8,7 +8,7 @@ import {
 import {
   SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
-import { Scene, MediaPlan, TTSSettings, SubtitleCue } from "../types";
+import { Scene, MediaPlan, TTSSettings, SubtitleCue, RenderSettings } from "../types";
 import { renumber, estimateDuration, DEFAULT_MEDIA } from "../utils/sceneOps";
 import SceneCard from "./SceneCard";
 import SplitSceneModal from "./SplitSceneModal";
@@ -27,10 +27,11 @@ interface Props {
   projectId: string;
   ttsSettings: TTSSettings;
   imageStyle: string;
+  renderSettings: RenderSettings;
 }
 
 export default function SceneEditor({
-  scenes, onChange, warnings, aiProvider, modelUsed, disabled = false, projectId, ttsSettings, imageStyle,
+  scenes, onChange, warnings, aiProvider, modelUsed, disabled = false, projectId, ttsSettings, imageStyle, renderSettings,
 }: Props) {
   const [splitTarget, setSplitTarget] = useState<number | null>(null);
   const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null);
@@ -308,6 +309,7 @@ export default function SceneEditor({
               ttsSettings={ttsSettings}
               batchMode={batchLoading ? batchMode : null}
               imageStyle={imageStyle}
+              renderSettings={renderSettings}
               onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
               onAudioUpdate={handleAudioUpdate}
               onVisualUpdate={handleVisualUpdate}

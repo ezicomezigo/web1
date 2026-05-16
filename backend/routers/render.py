@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, HTTPException
 
-from models.schemas import SceneAssets
+from models.schemas import SceneAssets, RenderSettings
 from routers.projects import load_project, save_project, project_path
 from services.render_service import render_scene, check_ffmpeg
 
@@ -19,7 +19,7 @@ def ffmpeg_check():
 
 
 @router.post("/{project_id}/scenes/{scene_id}/render")
-def render_scene_endpoint(project_id: str, scene_id: int):
+def render_scene_endpoint(project_id: str, scene_id: int, settings: RenderSettings | None = None):
     project = load_project(project_id)
     idx = next((i for i, s in enumerate(project.scenes) if s.scene_id == scene_id), None)
     if idx is None:
@@ -38,7 +38,7 @@ def render_scene_endpoint(project_id: str, scene_id: int):
     output_path = base / "media" / output_filename
 
     try:
-        render_scene(scene_id, audio_path, visual_path, cues, output_path)
+        render_scene(scene_id, audio_path, visual_path, cues, output_path, settings)
     except RuntimeError as e:
         raise HTTPException(500, str(e))
     except Exception as e:

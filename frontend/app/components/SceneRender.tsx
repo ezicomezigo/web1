@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Clapperboard, Loader2, RotateCcw, Trash } from "lucide-react";
+import { RenderSettings } from "../types";
 
 const API_BASE = "http://localhost:8000";
 
@@ -11,10 +12,11 @@ interface Props {
   hasAudio: boolean;
   videoPath: string | null | undefined;
   onChange: (sceneId: number, videoPath: string | null) => void;
+  settings?: RenderSettings;
   compact?: boolean;
 }
 
-export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, onChange, compact = false }: Props) {
+export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, onChange, settings, compact = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
@@ -29,7 +31,11 @@ export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, o
     try {
       const res = await fetch(
         `${API_BASE}/api/projects/${projectId}/scenes/${sceneId}/render`,
-        { method: "POST" },
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(settings ?? {}),
+        },
       );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

@@ -66,3 +66,10 @@ class SceneRange(BaseModel):
     topic_summary: str
     estimated_duration: float
     media: MediaPlan
+
+
+class RenderSettings(BaseModel):
+    """장면 렌더링 시 자막 스타일 설정."""
+    subtitle_font_size: int = 22         # 자막 폰트 크기 (px, 1920 기준)
+    subtitle_font_name: str | None = None  # None → 플랫폼 기본 한글 폰트
+    subtitle_outline: int = 2            # 자막 외곽선 두께

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AIProvider, AnalyzeResponse, GeminiModel, GEMINI_MODELS, TTSSettings, GEMINI_TTS_MODELS } from "./types";
+import { AIProvider, AnalyzeResponse, GeminiModel, GEMINI_MODELS, TTSSettings, GEMINI_TTS_MODELS, RenderSettings, DEFAULT_RENDER_SETTINGS } from "./types";
 import { useProject } from "./hooks/useProject";
 import { useLocalStorageState } from "./hooks/useLocalStorageState";
 import AISelector from "./components/AISelector";
@@ -9,6 +9,7 @@ import ScriptInput from "./components/ScriptInput";
 import SceneEditor from "./components/SceneEditor";
 import MediaRatioSlider, { MediaRatio } from "./components/MediaRatioSlider";
 import TTSSettingsPanel from "./components/TTSSettings";
+import RenderSettingsPanel from "./components/RenderSettingsPanel";
 import ProjectBar from "./components/ProjectBar";
 import ProjectListModal from "./components/ProjectListModal";
 import Collapsible from "./components/Collapsible";
@@ -46,7 +47,9 @@ export default function Home() {
   const [openMedia, setOpenMedia] = useState(true);
   const [openTTS, setOpenTTS] = useState(true);
   const [openImageStyle, setOpenImageStyle] = useState(true);
+  const [openRender, setOpenRender] = useState(true);
   const [imageStyle, setImageStyle] = useLocalStorageState<string>("yt-image-style", "");
+  const [renderSettings, setRenderSettings] = useLocalStorageState<RenderSettings>("yt-render-settings", DEFAULT_RENDER_SETTINGS);
 
   const script = project?.script ?? "";
   const scenes = project?.scenes ?? [];
@@ -61,6 +64,7 @@ export default function Home() {
       setOpenMedia(false);
       setOpenTTS(false);
       setOpenImageStyle(false);
+      setOpenRender(false);
     }
     hadScenesRef.current = scenes.length > 0;
   }, [scenes.length]);
@@ -283,6 +287,15 @@ export default function Home() {
               />
             </Collapsible>
 
+            <Collapsible
+              title="렌더 · 자막 설정"
+              open={openRender}
+              onToggle={() => setOpenRender(v => !v)}
+              summary={`자막 ${renderSettings.subtitle_font_size}px · ${renderSettings.subtitle_font_name ?? "기본 폰트"}`}
+            >
+              <RenderSettingsPanel value={renderSettings} onChange={setRenderSettings} />
+            </Collapsible>
+
             <div className="mt-2">
               <h2 className="text-lg font-bold text-gray-800 mb-4">장면 편집</h2>
               <SceneEditor
@@ -295,6 +308,7 @@ export default function Home() {
                 projectId={project.id}
                 ttsSettings={ttsSettings}
                 imageStyle={imageStyle}
+                renderSettings={renderSettings}
               />
             </div>
           </div>

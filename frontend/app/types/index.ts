@@ -130,3 +130,17 @@ export interface ProjectMeta {
   updated_at: string;
   scene_count: number;
 }
+
+// ─── 렌더 설정 ───────────────────────────────────────────────────────────────
+
+export interface RenderSettings {
+  subtitle_font_size: number;        // 자막 폰트 크기 (px, 1920 기준)
+  subtitle_font_name: string | null; // null → 플랫폼 기본 한글 폰트
+  subtitle_outline: number;          // 자막 외곽선 두께
+}
+
+export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
+  subtitle_font_size: 28,
+  subtitle_font_name: null,
+  subtitle_outline: 2,
+};
