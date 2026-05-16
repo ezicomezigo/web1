@@ -352,7 +352,7 @@ export default function SceneCard({
                 <button onClick={pasteVisualFromClipboard} disabled={visualUploading}
                   className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40"
                   title="클립보드 이미지로 교체">
-                  <ClipboardPaste size={11} /> 붙여넣기
+                  {visualUploading ? <Loader2 size={11} className="animate-spin" /> : <ClipboardPaste size={11} />} 붙여넣기
                 </button>
                 <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading}
                   className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
@@ -362,6 +362,11 @@ export default function SceneCard({
                   <Trash size={11} />
                 </button>
               </div>
+              {visualError && (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2 leading-relaxed break-words">
+                  {visualError}
+                </div>
+              )}
               {visualIsVideo ? (
                 <video src={visualUrl} controls className="w-full max-h-48 rounded-lg bg-black" />
               ) : (
