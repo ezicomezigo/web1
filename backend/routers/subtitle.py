@@ -36,10 +36,18 @@ def generate_subtitle(project_id: str, scene_id: int):
         logger.exception("Subtitle generation failed")
         raise HTTPException(500, f"자막 생성 실패: {e}")
 
+    # 인식된 자막을 원본 스크립트로 자동 보정 (타임스탬프 유지)
+    if cues and scene.text.strip():
+        try:
+            cues = correct_cues_with_script(cues, scene.text)
+        except Exception as e:
+            logger.warning("자동 보정 실패, 원본 Whisper 결과 사용: %s", e)
+
     project.scenes[idx].assets = SceneAssets(
         audio=scene.assets.audio,
         visual=scene.assets.visual,
         subtitle=cues,
+        video=scene.assets.video,
     )
     save_project(project)
     return cues
@@ -57,6 +65,7 @@ def save_subtitle(project_id: str, scene_id: int, req: SubtitleSaveRequest):
         audio=scene.assets.audio,
         visual=scene.assets.visual,
         subtitle=req.cues,
+        video=scene.assets.video,
     )
     save_project(project)
     return req.cues
@@ -98,6 +107,7 @@ def delete_subtitle(project_id: str, scene_id: int):
         audio=scene.assets.audio,
         visual=scene.assets.visual,
         subtitle=None,
+        video=scene.assets.video,
     )
     save_project(project)
     return {"ok": True}
