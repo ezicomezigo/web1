@@ -275,10 +275,19 @@ export default function SceneCard({
               <p className="text-xs font-mono opacity-75 leading-relaxed">{scene.media.ai_image_prompt}</p>
             )}
             {scene.media.stock_keywords && (
-              <div className="flex flex-wrap gap-1">
-                {scene.media.stock_keywords.map(kw => (
-                  <span key={kw} className="text-xs bg-white/60 rounded px-1.5 py-0.5 border border-current/20">{kw}</span>
-                ))}
+              <div className="flex items-center gap-2">
+                <div className="flex flex-wrap gap-1 flex-1">
+                  {scene.media.stock_keywords.map(kw => (
+                    <span key={kw} className="text-xs bg-white/60 rounded px-1.5 py-0.5 border border-current/20">{kw}</span>
+                  ))}
+                </div>
+                {(scene.media.media_type === "stock_photo" || scene.media.media_type === "stock_video") && (
+                  <button onClick={() => setShowStockSearch(true)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 text-xs font-medium hover:bg-white shrink-0 border border-current/20"
+                    title="스톡 검색">
+                    <SearchIcon size={11} /> 스톡 검색
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -398,12 +407,6 @@ export default function SceneCard({
                       ? <><Check size={11} /> 복사됨</>
                       : <><Copy size={11} /> 프롬프트</>
                     }
-                  </button>
-                )}
-                {(scene.media.media_type === "stock_photo" || scene.media.media_type === "stock_video") && (
-                  <button onClick={() => setShowStockSearch(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700">
-                    <SearchIcon size={11} /> 스톡 검색
                   </button>
                 )}
                 <button onClick={pasteVisualFromClipboard} disabled={visualUploading}
