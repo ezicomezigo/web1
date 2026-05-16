@@ -19,7 +19,7 @@ const API_BASE = "http://localhost:8000";
 
 interface Props {
   scenes: Scene[];
-  onChange: (scenes: Scene[]) => void;
+  onChange: (scenes: Scene[] | ((prev: Scene[]) => Scene[])) => void;
   warnings: string[];
   aiProvider: string;
   modelUsed: string;
@@ -46,7 +46,7 @@ export default function SceneEditor({
 
   // ─── 오디오 업데이트 ─────────────────────────────────────────────────────
   function handleAudioUpdate(sceneId: number, audioPath: string | null, duration: number) {
-    onChange(scenes.map(s => s.scene_id === sceneId
+    onChange(prev => prev.map(s => s.scene_id === sceneId
       ? { ...s, assets: { ...(s.assets ?? { visual: null }), audio: audioPath }, estimated_duration: duration }
       : s
     ));
