@@ -34,6 +34,7 @@ export default function SceneEditor({
   const [splitTarget, setSplitTarget] = useState<number | null>(null);
   const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [batchMode, setBatchMode] = useState<"all" | "missing" | null>(null);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; sceneId: number } | null>(null);
   const [batchErrors, setBatchErrors] = useState<{ sceneId: number; error: string }[]>([]);
 
@@ -60,11 +61,14 @@ export default function SceneEditor({
     const missing = scenes.length - existing;
     let targets: typeof scenes;
 
+    let mode: "all" | "missing";
     if (existing === 0) {
       if (!confirm(`${scenes.length}개 장면의 오디오를 생성합니다. 계속하시겠습니까?`)) return;
+      mode = "all";
       targets = scenes;
     } else if (missing === 0) {
       if (!confirm(`모든 장면(${scenes.length}개)에 이미 오디오가 있습니다.\n전체 다시 생성하시겠습니까?`)) return;
+      mode = "all";
       targets = scenes;
     } else {
       const choice = window.prompt(
@@ -75,10 +79,12 @@ export default function SceneEditor({
         "2"
       );
       if (choice !== "1" && choice !== "2") return;
-      targets = choice === "1" ? scenes : scenes.filter(s => !s.assets?.audio);
+      mode = choice === "1" ? "all" : "missing";
+      targets = mode === "all" ? scenes : scenes.filter(s => !s.assets?.audio);
     }
 
     setBatchLoading(true);
+    setBatchMode(mode);
     setBatchErrors([]);
     const errors: { sceneId: number; error: string }[] = [];
     try {
@@ -103,6 +109,7 @@ export default function SceneEditor({
       }
     } finally {
       setBatchProgress(null);
+      setBatchMode(null);
       setBatchErrors(errors);
       setBatchLoading(false);
     }
@@ -265,6 +272,7 @@ export default function SceneEditor({
               total={scenes.length}
               projectId={projectId}
               ttsSettings={ttsSettings}
+              batchMode={batchLoading ? batchMode : null}
               onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
               onAudioUpdate={handleAudioUpdate}
               onSplit={() => setSplitTarget(index)}

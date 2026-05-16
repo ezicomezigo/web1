@@ -20,6 +20,7 @@ interface Props {
   total: number;
   projectId: string;
   ttsSettings: TTSSettings;
+  batchMode: "all" | "missing" | null;
   onUpdate: (text: string, topicSummary: string, media: MediaPlan) => void;
   onAudioUpdate: (sceneId: number, audioPath: string | null, duration: number) => void;
   onSplit: () => void;
@@ -46,7 +47,7 @@ function durationColor(sec: number) {
 }
 
 export default function SceneCard({
-  scene, index, total, projectId, ttsSettings,
+  scene, index, total, projectId, ttsSettings, batchMode,
   onUpdate, onAudioUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -118,6 +119,10 @@ export default function SceneCard({
   const audioUrl = scene.assets?.audio
     ? `${API_BASE}/api/projects/${projectId}/${scene.assets.audio}`
     : null;
+
+  // 배치 중 버튼 비활성화: all → 생성/재생성 모두, missing → 생성 버튼만
+  const batchDisableGenerate = batchMode !== null;
+  const batchDisableRegenerate = batchMode === "all";
 
   const liveDuration = editing ? estimateDuration(draftText) : scene.estimated_duration;
 
@@ -204,7 +209,7 @@ export default function SceneCard({
                 <Play size={12} className="text-emerald-600 shrink-0" />
                 <span className="text-xs font-medium text-emerald-700">오디오 생성됨 · {scene.estimated_duration.toFixed(1)}초</span>
                 <div className="flex-1" />
-                <button onClick={generateAudio} disabled={audioLoading}
+                <button onClick={generateAudio} disabled={audioLoading || batchDisableRegenerate}
                   className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
                   {audioLoading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 재생성
                 </button>
@@ -222,7 +227,7 @@ export default function SceneCard({
                 <span className="text-xs text-gray-400 flex-1">오디오 없음</span>
                 <button
                   onClick={generateAudio}
-                  disabled={audioLoading}
+                  disabled={audioLoading || batchDisableGenerate}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
                 >
                   {audioLoading
