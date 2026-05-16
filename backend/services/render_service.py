@@ -31,6 +31,27 @@ def check_ffmpeg() -> str:
     return path
 
 
+def _get_audio_duration(audio_path: Path) -> float | None:
+    """오디오 파일의 실제 재생 시간(초)을 반환. 실패하면 None."""
+    try:
+        suffix = audio_path.suffix.lower()
+        if suffix == ".mp3":
+            from mutagen.mp3 import MP3
+            return MP3(str(audio_path)).info.length
+        elif suffix in {".wav", ".wave"}:
+            import wave
+            with wave.open(str(audio_path)) as wf:
+                return wf.getnframes() / wf.getframerate()
+        else:
+            from mutagen import File as MutagenFile
+            f = MutagenFile(str(audio_path))
+            if f and f.info:
+                return f.info.length
+    except Exception as e:
+        logger.warning("오디오 길이 읽기 실패 (%s): %s", audio_path, e)
+    return None
+
+
 def render_scene(
     scene_id: int,
     audio_path: Path,
@@ -41,6 +62,7 @@ def render_scene(
     """장면 하나를 렌더링해 output_path 에 mp4로 저장한다."""
     ffmpeg = check_ffmpeg()
 
+    audio_duration = _get_audio_duration(audio_path)
     visual_is_video = visual_path and _is_video(visual_path)
 
     # SRT 임시 파일 (자막이 있을 때만)
@@ -57,7 +79,7 @@ def render_scene(
         srt_path = Path(srt_tmp.name)
 
     try:
-        cmd = _build_cmd(ffmpeg, audio_path, visual_path, visual_is_video, srt_path, output_path)
+        cmd = _build_cmd(ffmpeg, audio_path, visual_path, visual_is_video, srt_path, output_path, audio_duration)
         logger.info("Rendering scene %d: %s", scene_id, " ".join(str(c) for c in cmd))
         result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if result.returncode != 0:
@@ -77,6 +99,7 @@ def _build_cmd(
     visual_is_video: bool,
     srt_path: Path | None,
     output_path: Path,
+    duration: float | None = None,
 ) -> list[str]:
     cmd: list[str] = [ffmpeg, "-y"]
 
@@ -115,8 +138,10 @@ def _build_cmd(
         "-b:a", "192k",
         "-shortest",
         "-pix_fmt", "yuv420p",
-        str(output_path),
     ]
+    if duration is not None:
+        cmd += ["-t", f"{duration:.6f}"]
+    cmd.append(str(output_path))
     return cmd
 
 
