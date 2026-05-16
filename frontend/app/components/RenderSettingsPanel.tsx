@@ -101,6 +101,27 @@ export default function RenderSettingsPanel({ value, onChange }: Props) {
 
       </div>
 
+      {/* 한 줄 글자수 강제 지정 */}
+      <label className="flex items-center gap-3">
+        <span className="text-xs font-medium text-gray-600 shrink-0">한 줄 최대 글자수</span>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          placeholder="자동"
+          value={value.subtitle_max_chars ?? ""}
+          onChange={e => {
+            const n = Number(e.target.value);
+            onChange({ ...value, subtitle_max_chars: e.target.value === "" || n <= 0 ? null : n });
+          }}
+          className="w-24 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        />
+        <span className="text-[11px] text-gray-400">
+          비워두면 폰트 크기에 따라 자동 계산. 화면 밖으로 글자가 넘치면 이 값을 줄이세요.
+        </span>
+      </label>
+
       <p className="text-xs text-gray-500 leading-relaxed bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
         폰트 크기를 키우면 자동으로 한 줄에 맞춰 자막이 분할됩니다.
         각 조각은 원래 큐의 시간 구간 안에서 글자수에 비례해 순차 표시됩니다.

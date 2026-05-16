@@ -137,10 +137,12 @@ export interface RenderSettings {
   subtitle_font_size: number;        // 자막 폰트 크기 (px, 1920 기준)
   subtitle_font_name: string | null; // null → 플랫폼 기본 한글 폰트
   subtitle_outline: number;          // 자막 외곽선 두께
+  subtitle_max_chars: number | null; // 한 줄 최대 글자수 강제 지정 (null → 자동)
 }
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   subtitle_font_size: 28,
   subtitle_font_name: null,
   subtitle_outline: 2,
+  subtitle_max_chars: null,
 };

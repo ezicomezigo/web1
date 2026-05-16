@@ -19,13 +19,12 @@ logger = logging.getLogger(__name__)
 OUTPUT_WIDTH = 1920
 OUTPUT_HEIGHT = 1080
 
-# 가로 폭 대비 사용 가능한 자막 영역 비율 (양쪽 여백 약 10%씩, 보수적)
-SUBTITLE_USABLE_WIDTH_RATIO = 0.78
+# 가로 폭 대비 사용 가능한 자막 영역 비율
+SUBTITLE_USABLE_WIDTH_RATIO = 0.72
 
-# CJK(전각) 문자 폭은 font_size 와 거의 동일하다고 가정.
-# 라틴 문자/공백은 평균적으로 좁아서 약 0.55 배 정도.
-# 한국어 위주 자막을 가정하고 1.0 을 기본 계수로 사용.
-SUBTITLE_CHAR_WIDTH_FACTOR = 1.0
+# 한글 한 글자의 가로 폭 ÷ font_size 비율.
+# 주아체 등 display 폰트는 1.0 보다 넓을 수 있어 보수적으로 1.1 사용.
+SUBTITLE_CHAR_WIDTH_FACTOR = 1.1
 
 
 def check_ffmpeg() -> str:
@@ -78,7 +77,7 @@ def render_scene(
     # 폰트 크기에 맞춰 한 줄에 안 들어가는 큐를 시간 분배로 쪼개기
     display_cues: list[SubtitleCue] = []
     if cues:
-        max_chars = _max_chars_per_line(settings.subtitle_font_size)
+        max_chars = settings.subtitle_max_chars or _max_chars_per_line(settings.subtitle_font_size)
         for c in cues:
             display_cues.extend(_split_cue_for_line_fit(c, max_chars))
 
