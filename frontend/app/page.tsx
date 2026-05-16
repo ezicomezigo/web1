@@ -12,6 +12,7 @@ import ProjectBar from "./components/ProjectBar";
 import ProjectListModal from "./components/ProjectListModal";
 import Collapsible from "./components/Collapsible";
 import SceneJumpNav from "./components/SceneJumpNav";
+import ImageStylePanel from "./components/ImageStylePanel";
 import { Loader2, Scissors, FolderPlus } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -43,6 +44,8 @@ export default function Home() {
   const [openAI, setOpenAI] = useState(true);
   const [openMedia, setOpenMedia] = useState(true);
   const [openTTS, setOpenTTS] = useState(true);
+  const [openImageStyle, setOpenImageStyle] = useState(true);
+  const [imageStyle, setImageStyle] = useState("");
 
   const script = project?.script ?? "";
   const scenes = project?.scenes ?? [];
@@ -56,6 +59,7 @@ export default function Home() {
       setOpenAI(false);
       setOpenMedia(false);
       setOpenTTS(false);
+      setOpenImageStyle(false);
     }
     hadScenesRef.current = scenes.length > 0;
   }, [scenes.length]);
@@ -264,6 +268,19 @@ export default function Home() {
               summary={`${ttsSettings.provider === "gemini" ? "Gemini" : "MiniMax"} · ${ttsSettings.model} · ${ttsSettings.voice}`}
             >
               <TTSSettingsPanel value={ttsSettings} onChange={setTtsSettings} disabled={loading} />
+            </Collapsible>
+
+            <Collapsible
+              title="AI 이미지 스타일 & 프롬프트 추출"
+              open={openImageStyle}
+              onToggle={() => setOpenImageStyle(v => !v)}
+              summary={imageStyle.trim() ? imageStyle.slice(0, 50) + (imageStyle.length > 50 ? "..." : "") : "스타일 미설정"}
+            >
+              <ImageStylePanel
+                style={imageStyle}
+                onStyleChange={setImageStyle}
+                scenes={scenes}
+              />
             </Collapsible>
 
             <div className="mt-2">
