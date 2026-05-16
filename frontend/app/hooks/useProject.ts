@@ -30,7 +30,7 @@ export interface UseProjectReturn {
   listProjects: () => Promise<ProjectMeta[]>;
 
   setScript: (s: string) => void;
-  setScenes: (s: Scene[]) => void;
+  setScenes: (s: Scene[] | ((prev: Scene[]) => Scene[])) => void;
   setAnalysisInfo: (a: AnalysisInfo | null) => void;
   clearDraft: () => void;
   discardProject: () => void;
@@ -236,9 +236,17 @@ export function useProject(): UseProjectReturn {
     setIsDirty(true);
   }
 
-  function setScenes(scenes: Scene[]) {
-    setProject(p => p ? { ...p, scenes } : p);
-    setDraft(d => d ? { ...d, scenes, savedAt: new Date().toISOString() } : null);
+  function setScenes(scenes: Scene[] | ((prev: Scene[]) => Scene[])) {
+    setProject(p => {
+      if (!p) return p;
+      const next = typeof scenes === "function" ? scenes(p.scenes) : scenes;
+      return { ...p, scenes: next };
+    });
+    setDraft(d => {
+      if (!d) return null;
+      const next = typeof scenes === "function" ? scenes(d.scenes) : scenes;
+      return { ...d, scenes: next, savedAt: new Date().toISOString() };
+    });
     setIsDirty(true);
   }
 
