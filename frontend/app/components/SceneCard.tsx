@@ -216,20 +216,26 @@ export default function SceneCard({
                 className="w-full h-8 [&::-webkit-media-controls-panel]:bg-white" />
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Mic2 size={12} className="text-gray-400 shrink-0" />
-              <span className="text-xs text-gray-400 flex-1">오디오 없음</span>
-              {audioError && <span className="text-xs text-red-500 truncate max-w-[180px]" title={audioError}>{audioError}</span>}
-              <button
-                onClick={generateAudio}
-                disabled={audioLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {audioLoading
-                  ? <><Loader2 size={11} className="animate-spin" /> 생성 중...</>
-                  : <><Mic2 size={11} /> 오디오 생성</>
-                }
-              </button>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <Mic2 size={12} className="text-gray-400 shrink-0" />
+                <span className="text-xs text-gray-400 flex-1">오디오 없음</span>
+                <button
+                  onClick={generateAudio}
+                  disabled={audioLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {audioLoading
+                    ? <><Loader2 size={11} className="animate-spin" /> 생성 중...</>
+                    : <><Mic2 size={11} /> 오디오 생성</>
+                  }
+                </button>
+              </div>
+              {audioError && (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2 leading-relaxed break-words">
+                  {audioError}
+                </div>
+              )}
             </div>
           )}
         </div>
