@@ -33,12 +33,21 @@ async def search_pixabay(keywords: list[str], media_type: str, page: int = 1, pe
     results = []
     for hit in data.get("hits", []):
         if media_type == "video":
-            medium = hit.get("videos", {}).get("medium", {})
-            small = hit.get("videos", {}).get("small", {})
+            videos = hit.get("videos", {})
+            medium = videos.get("medium", {})
+            small = videos.get("small", {})
+            tiny = videos.get("tiny", {})
+            thumb = (
+                small.get("thumbnail")
+                or tiny.get("thumbnail")
+                or medium.get("thumbnail")
+                or (hit.get("picture_id") and f"https://i.vimeocdn.com/video/{hit['picture_id']}_295x166.jpg")
+                or ""
+            )
             results.append(StockItem(
                 id=str(hit["id"]),
                 source=StockSource.pixabay,
-                thumb_url=hit.get("picture_id") and f"https://i.vimeocdn.com/video/{hit['picture_id']}_295x166.jpg" or "",
+                thumb_url=thumb,
                 preview_url=small.get("url", medium.get("url", "")),
                 download_url=medium.get("url", small.get("url", "")),
                 width=medium.get("width", 0),
