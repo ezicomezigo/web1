@@ -9,7 +9,7 @@ import MediaPlanEditor from "./MediaPlanEditor";
 import {
   GripVertical, Pencil, Check, X, Scissors,
   Trash2, Plus, Sparkles, Image, Video,
-  ChevronUp, ChevronDown, Mic2, Loader2, Play, RotateCcw, Trash,
+  ChevronUp, ChevronDown, Mic2, Loader2, Play, RotateCcw, Trash, Upload, Copy,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -23,6 +23,7 @@ interface Props {
   batchMode: "all" | "missing" | null;
   onUpdate: (text: string, topicSummary: string, media: MediaPlan) => void;
   onAudioUpdate: (sceneId: number, audioPath: string | null, duration: number) => void;
+  onVisualUpdate: (sceneId: number, visualPath: string | null) => void;
   onSplit: () => void;
   onMerge: (dir: "up" | "down") => void;
   onDelete: () => void;
@@ -48,7 +49,7 @@ function durationColor(sec: number) {
 
 export default function SceneCard({
   scene, index, total, projectId, ttsSettings, batchMode,
-  onUpdate, onAudioUpdate, onSplit, onMerge, onDelete, onAddAfter,
+  onUpdate, onAudioUpdate, onVisualUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(scene.text);
@@ -56,7 +57,10 @@ export default function SceneCard({
   const [draftMedia, setDraftMedia] = useState<MediaPlan>(scene.media);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [visualUploading, setVisualUploading] = useState(false);
+  const [visualError, setVisualError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: scene.scene_id });
@@ -116,9 +120,49 @@ export default function SceneCard({
     onAudioUpdate(scene.scene_id, null, estimateDuration(scene.text));
   }
 
+  async function uploadVisual(file: File) {
+    setVisualUploading(true);
+    setVisualError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${scene.scene_id}/visual/upload`, {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail ?? `HTTP ${res.status}`);
+      }
+      const data: { visual_path: string } = await res.json();
+      onVisualUpdate(scene.scene_id, data.visual_path);
+    } catch (e) {
+      setVisualError(e instanceof Error ? e.message : "업로드 실패");
+    } finally {
+      setVisualUploading(false);
+    }
+  }
+
+  async function deleteVisual() {
+    await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${scene.scene_id}/visual`, { method: "DELETE" });
+    onVisualUpdate(scene.scene_id, null);
+  }
+
+  function copyImagePrompt() {
+    if (scene.media.ai_image_prompt) {
+      navigator.clipboard.writeText(scene.media.ai_image_prompt);
+    }
+  }
+
   const audioUrl = scene.assets?.audio
     ? `${API_BASE}/api/projects/${projectId}/${scene.assets.audio}`
     : null;
+  const visualUrl = scene.assets?.visual
+    ? `${API_BASE}/api/projects/${projectId}/${scene.assets.visual}`
+    : null;
+  const visualIsVideo = scene.assets?.visual
+    ? /\.(mp4|mov|webm)$/i.test(scene.assets.visual)
+    : false;
 
   // 배치 중 버튼 비활성화: all → 생성/재생성 모두, missing → 생성 버튼만
   const batchDisableGenerate = batchMode !== null;
@@ -142,6 +186,12 @@ export default function SceneCard({
           <span className="w-6 h-6 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold shrink-0">
             {scene.scene_id}
           </span>
+          <div className="flex items-center gap-1 shrink-0" title="진행 상태: 오디오 · 비주얼 · 자막 · 영상">
+            <span className={`w-2 h-2 rounded-full ${audioUrl ? "bg-emerald-500" : "bg-gray-200"}`} title="오디오" />
+            <span className={`w-2 h-2 rounded-full ${visualUrl ? "bg-emerald-500" : "bg-gray-200"}`} title="비주얼" />
+            <span className="w-2 h-2 rounded-full bg-gray-200" title="자막 (예정)" />
+            <span className="w-2 h-2 rounded-full bg-gray-200" title="장면 영상 (예정)" />
+          </div>
           {editing ? (
             <input
               value={draftTopic}
@@ -239,6 +289,87 @@ export default function SceneCard({
               {audioError && (
                 <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2 leading-relaxed break-words">
                   {audioError}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 비주얼 영역 */}
+        <div className="mx-4 mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/mp4,video/webm,video/quicktime"
+            className="hidden"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) uploadVisual(f);
+              e.target.value = "";
+            }}
+          />
+          {visualUrl ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                {visualIsVideo
+                  ? <Video size={12} className="text-emerald-600 shrink-0" />
+                  : <Image size={12} className="text-emerald-600 shrink-0" />}
+                <span className="text-xs font-medium text-emerald-700">
+                  {visualIsVideo ? "영상" : "이미지"} 업로드됨
+                </span>
+                <div className="flex-1" />
+                <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
+                  {visualUploading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 교체
+                </button>
+                <button onClick={deleteVisual} className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500">
+                  <Trash size={11} />
+                </button>
+              </div>
+              {visualIsVideo ? (
+                <video src={visualUrl} controls className="w-full max-h-48 rounded-lg bg-black" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={visualUrl} alt="장면 비주얼" className="w-full max-h-48 object-contain rounded-lg bg-white" />
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                {scene.media.media_type === "ai_image"
+                  ? <Sparkles size={12} className="text-gray-400 shrink-0" />
+                  : scene.media.media_type === "stock_video"
+                    ? <Video size={12} className="text-gray-400 shrink-0" />
+                    : <Image size={12} className="text-gray-400 shrink-0" />}
+                <span className="text-xs text-gray-400 flex-1">
+                  비주얼 없음
+                  {scene.media.media_type === "ai_image" && " · AI 이미지 외부 생성 후 업로드"}
+                  {scene.media.media_type === "stock_photo" && " · 스톡 사진 (검색 예정)"}
+                  {scene.media.media_type === "stock_video" && " · 스톡 영상 (검색 예정)"}
+                </span>
+                {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
+                  <button
+                    onClick={copyImagePrompt}
+                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-600"
+                    title="이미지 프롬프트 복사"
+                  >
+                    <Copy size={11} /> 프롬프트
+                  </button>
+                )}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={visualUploading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {visualUploading
+                    ? <><Loader2 size={11} className="animate-spin" /> 업로드 중...</>
+                    : <><Upload size={11} /> 업로드</>
+                  }
+                </button>
+              </div>
+              {visualError && (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2 leading-relaxed break-words">
+                  {visualError}
                 </div>
               )}
             </div>

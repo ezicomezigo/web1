@@ -55,6 +55,14 @@ export default function SceneEditor({
     ));
   }
 
+  // ─── 비주얼 업데이트 ─────────────────────────────────────────────────────
+  function handleVisualUpdate(sceneId: number, visualPath: string | null) {
+    onChange(prev => prev.map(s => s.scene_id === sceneId
+      ? { ...s, assets: { ...(s.assets ?? { audio: null }), visual: visualPath } }
+      : s
+    ));
+  }
+
   // ─── 전체 오디오 일괄 생성 (순차 호출로 진행 상황 표시) ──────────────────
   async function handleBatchGenerate() {
     const existing = scenes.filter(s => s.assets?.audio).length;
@@ -275,6 +283,7 @@ export default function SceneEditor({
               batchMode={batchLoading ? batchMode : null}
               onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
               onAudioUpdate={handleAudioUpdate}
+              onVisualUpdate={handleVisualUpdate}
               onSplit={() => setSplitTarget(index)}
               onMerge={(dir) => handleMerge(index, dir)}
               onDelete={() => handleDelete(index)}

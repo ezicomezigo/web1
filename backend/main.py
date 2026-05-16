@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from routers.scenes import router as scenes_router
 from routers.projects import router as projects_router
 from routers.tts import router as tts_router
+from routers.visual import router as visual_router
 
 load_dotenv()
 
@@ -28,6 +29,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 app.include_router(scenes_router)
 app.include_router(projects_router)
 app.include_router(tts_router)
+app.include_router(visual_router)
 
 
 @app.get("/health")
