@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Clapperboard, Loader2, RotateCcw, Trash, Play } from "lucide-react";
+import { Clapperboard, Loader2, RotateCcw, Trash } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
 
@@ -17,9 +17,10 @@ interface Props {
 export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, onChange, compact = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [version, setVersion] = useState(0);
 
   const videoUrl = videoPath
-    ? `${API_BASE}/api/projects/${projectId}/${videoPath}`
+    ? `${API_BASE}/api/projects/${projectId}/${videoPath}${version ? `?v=${version}` : ""}`
     : null;
 
   async function render() {
@@ -35,6 +36,7 @@ export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, o
         throw new Error(body.detail ?? `HTTP ${res.status}`);
       }
       const data: { video_path: string } = await res.json();
+      setVersion(v => v + 1);
       onChange(sceneId, data.video_path);
     } catch (e) {
       setError(e instanceof Error ? e.message : "렌더링 실패");
@@ -51,15 +53,15 @@ export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, o
   if (!hasAudio) {
     if (compact) return (
       <div className="rounded-xl border border-gray-100 bg-gray-50 px-2.5 py-2">
-        <div className="flex items-center gap-1 text-[10px] text-gray-300">
-          <Clapperboard size={10} /><span>오디오 필요</span>
+        <div className="flex items-center gap-1.5 text-xs text-gray-300">
+          <Clapperboard size={13} /><span>오디오 필요</span>
         </div>
       </div>
     );
     return (
       <div className="mx-4 mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
         <div className="flex items-center gap-2 text-xs text-gray-400">
-          <Clapperboard size={12} />
+          <Clapperboard size={13} />
           <span>오디오 생성 후 렌더링 가능</span>
         </div>
       </div>
@@ -68,30 +70,30 @@ export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, o
 
   if (compact) return (
     <div className="rounded-xl border border-gray-100 bg-gray-50 px-2.5 py-2">
-      <div className="flex items-center gap-1 mb-1.5">
-        <Clapperboard size={11} className={videoUrl ? "text-emerald-600" : "text-gray-400"} />
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <Clapperboard size={13} className={videoUrl ? "text-emerald-600" : "text-gray-400"} />
         <span className={`text-xs font-medium flex-1 truncate ${videoUrl ? "text-emerald-700" : "text-gray-400"}`}>
           {videoUrl ? "렌더 완료" : "렌더 없음"}
         </span>
         {videoUrl ? (
           <>
             <button onClick={render} disabled={loading} title="재렌더"
-              className="text-gray-300 hover:text-indigo-500 disabled:opacity-40">
-              {loading ? <Loader2 size={10} className="animate-spin" /> : <RotateCcw size={10} />}
+              className="text-gray-300 hover:text-indigo-500 disabled:opacity-40 p-0.5">
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
             </button>
-            <button onClick={deleteRender} title="삭제" className="text-gray-300 hover:text-red-400">
-              <Trash size={10} />
+            <button onClick={deleteRender} title="삭제" className="text-gray-300 hover:text-red-400 p-0.5">
+              <Trash size={14} />
             </button>
           </>
         ) : (
           <button onClick={render} disabled={loading}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-600 text-white text-[10px] font-medium hover:bg-indigo-700 disabled:opacity-50">
-            {loading ? <Loader2 size={9} className="animate-spin" /> : <Clapperboard size={9} />}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">
+            {loading ? <Loader2 size={11} className="animate-spin" /> : <Clapperboard size={11} />}
             {loading ? "렌더 중" : "렌더"}
           </button>
         )}
       </div>
-      {error && <div className="text-[10px] text-red-600 bg-red-50 rounded px-2 py-1 mb-1.5 break-words">{error}</div>}
+      {error && <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 mb-1.5 break-words">{error}</div>}
       {videoUrl && <video key={videoUrl} src={videoUrl} controls className="w-full rounded-lg bg-black aspect-video" />}
     </div>
   );
@@ -100,7 +102,7 @@ export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, o
     <div className="mx-4 mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <Clapperboard size={12} className={videoUrl ? "text-emerald-600" : "text-gray-400"} />
+          <Clapperboard size={13} className={videoUrl ? "text-emerald-600" : "text-gray-400"} />
           <span className={`text-xs font-medium flex-1 ${videoUrl ? "text-emerald-700" : "text-gray-400"}`}>
             {videoUrl ? "장면 영상 렌더 완료" : "장면 영상 없음"}
           </span>
@@ -108,17 +110,17 @@ export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, o
             <>
               <button onClick={render} disabled={loading}
                 className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
-                {loading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 재렌더
+                {loading ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />} 재렌더
               </button>
               <button onClick={deleteRender} className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500">
-                <Trash size={11} />
+                <Trash size={13} />
               </button>
             </>
           )}
           {!videoUrl && (
             <button onClick={render} disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">
-              {loading ? <><Loader2 size={11} className="animate-spin" /> 렌더링 중...</> : <><Clapperboard size={11} /> 장면 렌더</>}
+              {loading ? <><Loader2 size={13} className="animate-spin" /> 렌더링 중...</> : <><Clapperboard size={13} /> 장면 렌더</>}
             </button>
           )}
         </div>

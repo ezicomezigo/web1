@@ -361,12 +361,12 @@ export default function SceneCard({
             {/* 비주얼 */}
             <div className="rounded-xl border border-gray-100 bg-gray-50 px-2.5 py-2">
               {/* 비주얼 헤더 버튼들 */}
-              <div className="flex items-center gap-1 mb-1.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
                 {visualUrl
-                  ? (visualIsVideo ? <Video size={11} className="text-emerald-600" /> : <Image size={11} className="text-emerald-600" />)
-                  : (scene.media.media_type === "ai_image" ? <Sparkles size={11} className="text-gray-400" />
-                    : scene.media.media_type === "stock_video" ? <Video size={11} className="text-gray-400" />
-                    : <Image size={11} className="text-gray-400" />)
+                  ? (visualIsVideo ? <Video size={13} className="text-emerald-600" /> : <Image size={13} className="text-emerald-600" />)
+                  : (scene.media.media_type === "ai_image" ? <Sparkles size={13} className="text-gray-400" />
+                    : scene.media.media_type === "stock_video" ? <Video size={13} className="text-gray-400" />
+                    : <Image size={13} className="text-gray-400" />)
                 }
                 <span className={`text-xs font-medium flex-1 truncate ${visualUrl ? "text-emerald-700" : "text-gray-400"}`}>
                   {visualUrl ? (visualIsVideo ? "영상" : "이미지") : "비주얼 없음"}
@@ -374,32 +374,32 @@ export default function SceneCard({
                 {visualUrl ? (
                   <>
                     <button onClick={pasteVisualFromClipboard} disabled={visualUploading} title="클립보드 교체"
-                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40">
-                      {visualUploading ? <Loader2 size={10} className="animate-spin" /> : <ClipboardPaste size={10} />}
+                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40 p-0.5">
+                      {visualUploading ? <Loader2 size={14} className="animate-spin" /> : <ClipboardPaste size={14} />}
                     </button>
                     <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading} title="파일 교체"
-                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40">
-                      <RotateCcw size={10} />
+                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40 p-0.5">
+                      <RotateCcw size={14} />
                     </button>
-                    <button onClick={deleteVisual} className="text-gray-300 hover:text-red-400">
-                      <Trash size={10} />
+                    <button onClick={deleteVisual} className="text-gray-300 hover:text-red-400 p-0.5">
+                      <Trash size={14} />
                     </button>
                   </>
                 ) : (
                   <>
                     {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
                       <button onClick={copyImagePrompt} title="프롬프트 복사"
-                        className={`${promptCopied ? "text-emerald-500" : "text-gray-300 hover:text-indigo-500"}`}>
-                        {promptCopied ? <Check size={10} /> : <Copy size={10} />}
+                        className={`p-0.5 ${promptCopied ? "text-emerald-500" : "text-gray-300 hover:text-indigo-500"}`}>
+                        {promptCopied ? <Check size={14} /> : <Copy size={14} />}
                       </button>
                     )}
                     <button onClick={pasteVisualFromClipboard} disabled={visualUploading} title="클립보드 붙여넣기"
-                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40">
-                      <ClipboardPaste size={10} />
+                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40 p-0.5">
+                      <ClipboardPaste size={14} />
                     </button>
                     <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading} title="업로드"
-                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40">
-                      <Upload size={10} />
+                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40 p-0.5">
+                      <Upload size={14} />
                     </button>
                   </>
                 )}
