@@ -63,6 +63,7 @@ export default function SceneCard({
   const [visualError, setVisualError] = useState<string | null>(null);
   const [showStockSearch, setShowStockSearch] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
+  const [visualVersion, setVisualVersion] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -139,6 +140,7 @@ export default function SceneCard({
         throw new Error(body.detail ?? `HTTP ${res.status}`);
       }
       const data: { visual_path: string } = await res.json();
+      setVisualVersion(v => v + 1);
       onVisualUpdate(scene.scene_id, data.visual_path);
     } catch (e) {
       setVisualError(e instanceof Error ? e.message : "업로드 실패");
@@ -189,7 +191,7 @@ export default function SceneCard({
     ? `${API_BASE}/api/projects/${projectId}/${scene.assets.audio}`
     : null;
   const visualUrl = scene.assets?.visual
-    ? `${API_BASE}/api/projects/${projectId}/${scene.assets.visual}`
+    ? `${API_BASE}/api/projects/${projectId}/${scene.assets.visual}${visualVersion ? `?v=${visualVersion}` : ""}`
     : null;
   const visualIsVideo = scene.assets?.visual
     ? /\.(mp4|mov|webm)$/i.test(scene.assets.visual)
@@ -479,7 +481,7 @@ export default function SceneCard({
           sceneId={scene.scene_id}
           keywords={scene.media.stock_keywords ?? []}
           defaultMediaType={scene.media.media_type === "stock_video" ? "video" : "photo"}
-          onSelect={path => { onVisualUpdate(scene.scene_id, path); setShowStockSearch(false); }}
+          onSelect={path => { setVisualVersion(v => v + 1); onVisualUpdate(scene.scene_id, path); setShowStockSearch(false); }}
           onClose={() => setShowStockSearch(false)}
         />
       )}
