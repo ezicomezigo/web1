@@ -10,7 +10,7 @@ import StockSearchModal from "./StockSearchModal";
 import {
   GripVertical, Pencil, Check, X, Scissors,
   Trash2, Plus, Sparkles, Image, Video,
-  ChevronUp, ChevronDown, Mic2, Loader2, Play, RotateCcw, Trash, Upload, Copy, Search as SearchIcon,
+  ChevronUp, ChevronDown, Mic2, Loader2, Play, RotateCcw, Trash, Upload, Copy, Search as SearchIcon, ClipboardPaste,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -62,6 +62,7 @@ export default function SceneCard({
   const [visualUploading, setVisualUploading] = useState(false);
   const [visualError, setVisualError] = useState<string | null>(null);
   const [showStockSearch, setShowStockSearch] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -155,7 +156,33 @@ export default function SceneCard({
     const base = scene.media.ai_image_prompt?.trim() ?? "";
     if (!base) return;
     const full = imageStyle.trim() ? `${base}, ${imageStyle.trim()}` : base;
-    navigator.clipboard.writeText(full);
+    navigator.clipboard.writeText(full).then(() => {
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 1800);
+    });
+  }
+
+  async function pasteVisualFromClipboard() {
+    setVisualError(null);
+    try {
+      if (!navigator.clipboard?.read) {
+        throw new Error("이 브라우저는 클립보드 읽기를 지원하지 않습니다.");
+      }
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find(t => t.startsWith("image/"));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          const ext = imageType.split("/")[1].replace("jpeg", "jpg");
+          const file = new File([blob], `pasted-${Date.now()}.${ext}`, { type: imageType });
+          await uploadVisual(file);
+          return;
+        }
+      }
+      throw new Error("클립보드에 이미지가 없습니다.");
+    } catch (e) {
+      setVisualError(e instanceof Error ? e.message : "붙여넣기 실패");
+    }
   }
 
   const audioUrl = scene.assets?.audio
@@ -322,6 +349,11 @@ export default function SceneCard({
                   {visualIsVideo ? "영상" : "이미지"} 업로드됨
                 </span>
                 <div className="flex-1" />
+                <button onClick={pasteVisualFromClipboard} disabled={visualUploading}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40"
+                  title="클립보드 이미지로 교체">
+                  <ClipboardPaste size={11} /> 붙여넣기
+                </button>
                 <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading}
                   className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
                   {visualUploading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 교체
@@ -351,9 +383,14 @@ export default function SceneCard({
                 </span>
                 {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
                   <button onClick={copyImagePrompt}
-                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-600"
+                    className={`flex items-center gap-1 text-xs transition-colors ${
+                      promptCopied ? "text-emerald-600" : "text-gray-500 hover:text-indigo-600"
+                    }`}
                     title="이미지 프롬프트 복사 (스타일 포함)">
-                    <Copy size={11} /> 프롬프트
+                    {promptCopied
+                      ? <><Check size={11} /> 복사됨</>
+                      : <><Copy size={11} /> 프롬프트</>
+                    }
                   </button>
                 )}
                 {(scene.media.media_type === "stock_photo" || scene.media.media_type === "stock_video") && (
@@ -362,6 +399,11 @@ export default function SceneCard({
                     <SearchIcon size={11} /> 스톡 검색
                   </button>
                 )}
+                <button onClick={pasteVisualFromClipboard} disabled={visualUploading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  title="클립보드의 이미지 붙여넣기">
+                  <ClipboardPaste size={11} /> 붙여넣기
+                </button>
                 <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                 >
