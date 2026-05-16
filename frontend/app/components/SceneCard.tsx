@@ -247,212 +247,189 @@ export default function SceneCard({
           </span>
         </div>
 
-        {/* 대본 텍스트 */}
-        <div className="px-4 pb-3">
-          {editing ? (
-            <textarea
-              value={draftText}
-              onChange={e => setDraftText(e.target.value)}
-              rows={4}
-              autoFocus
-              className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm text-gray-800 leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          ) : (
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg px-3 py-2.5">
-              {scene.text}
-            </p>
-          )}
-        </div>
+        {/* 2열 본문 */}
+        <div className="flex gap-0 px-3 pb-3">
 
-        {/* 미디어 기획 — 편집 모드에서는 편집기로 전환 */}
-        {editing ? (
-          <div className="mx-4 mb-3 border border-gray-100 rounded-xl p-3">
-            <MediaPlanEditor value={draftMedia} onChange={setDraftMedia} />
-          </div>
-        ) : (
-          <div className={`mx-4 mb-3 rounded-lg border px-3 py-2 ${media.color}`}>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <MediaIcon size={12} />
-              <span className="text-xs font-semibold">{media.label}</span>
-            </div>
-            {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
-              <p className="text-xs font-mono opacity-75 leading-relaxed">{scene.media.ai_image_prompt}</p>
+          {/* ── 왼쪽: 대본 · 미디어 · 오디오 · 자막 ── */}
+          <div className="flex-1 flex flex-col gap-2 min-w-0 pr-3">
+
+            {/* 대본 텍스트 */}
+            {editing ? (
+              <textarea
+                value={draftText}
+                onChange={e => setDraftText(e.target.value)}
+                rows={4}
+                autoFocus
+                className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm text-gray-800 leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+            ) : (
+              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg px-3 py-2.5">
+                {scene.text}
+              </p>
             )}
-            {scene.media.stock_keywords && (
-              <div className="flex items-center gap-2">
-                <div className="flex flex-wrap gap-1 flex-1">
-                  {scene.media.stock_keywords.map(kw => (
-                    <span key={kw} className="text-xs bg-white/60 rounded px-1.5 py-0.5 border border-current/20">{kw}</span>
-                  ))}
-                </div>
-                {(scene.media.media_type === "stock_photo" || scene.media.media_type === "stock_video") && (
-                  <button onClick={() => setShowStockSearch(true)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 text-xs font-medium hover:bg-white shrink-0 border border-current/20"
-                    title="스톡 검색">
-                    <SearchIcon size={11} /> 스톡 검색
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* 오디오 영역 */}
-        <div className="mx-4 mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
-          {audioUrl ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Play size={12} className="text-emerald-600 shrink-0" />
-                <span className="text-xs font-medium text-emerald-700">오디오 생성됨 · {scene.estimated_duration.toFixed(1)}초</span>
-                <div className="flex-1" />
-                <button onClick={generateAudio} disabled={audioLoading || batchDisableRegenerate}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
-                  {audioLoading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 재생성
-                </button>
-                <button onClick={deleteAudio} className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500">
-                  <Trash size={11} />
-                </button>
+            {/* 미디어 기획 */}
+            {editing ? (
+              <div className="border border-gray-100 rounded-xl p-3">
+                <MediaPlanEditor value={draftMedia} onChange={setDraftMedia} />
               </div>
-              <audio ref={audioRef} src={audioUrl} controls
-                className="w-full h-8 [&::-webkit-media-controls-panel]:bg-white" />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Mic2 size={12} className="text-gray-400 shrink-0" />
-                <span className="text-xs text-gray-400 flex-1">오디오 없음</span>
-                <button
-                  onClick={generateAudio}
-                  disabled={audioLoading || batchDisableGenerate}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {audioLoading
-                    ? <><Loader2 size={11} className="animate-spin" /> 생성 중...</>
-                    : <><Mic2 size={11} /> 오디오 생성</>
-                  }
-                </button>
-              </div>
-              {audioError && (
-                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2 leading-relaxed break-words">
-                  {audioError}
+            ) : (
+              <div className={`rounded-lg border px-3 py-2 ${media.color}`}>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <MediaIcon size={12} />
+                  <span className="text-xs font-semibold">{media.label}</span>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* 비주얼 영역 */}
-        <div className="mx-4 mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,video/mp4,video/webm,video/quicktime"
-            className="hidden"
-            onChange={e => {
-              const f = e.target.files?.[0];
-              if (f) uploadVisual(f);
-              e.target.value = "";
-            }}
-          />
-          {visualUrl ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                {visualIsVideo
-                  ? <Video size={12} className="text-emerald-600 shrink-0" />
-                  : <Image size={12} className="text-emerald-600 shrink-0" />}
-                <span className="text-xs font-medium text-emerald-700">
-                  {visualIsVideo ? "영상" : "이미지"} 업로드됨
-                </span>
-                <div className="flex-1" />
-                <button onClick={pasteVisualFromClipboard} disabled={visualUploading}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40"
-                  title="클립보드 이미지로 교체">
-                  {visualUploading ? <Loader2 size={11} className="animate-spin" /> : <ClipboardPaste size={11} />} 붙여넣기
-                </button>
-                <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
-                  {visualUploading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 교체
-                </button>
-                <button onClick={deleteVisual} className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500">
-                  <Trash size={11} />
-                </button>
-              </div>
-              {visualError && (
-                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2 leading-relaxed break-words">
-                  {visualError}
-                </div>
-              )}
-              {visualIsVideo ? (
-                <video src={visualUrl} controls className="w-full max-h-48 rounded-lg bg-black" />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={visualUrl} alt="장면 비주얼" className="w-full max-h-48 object-contain rounded-lg bg-white" />
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                {scene.media.media_type === "ai_image"
-                  ? <Sparkles size={12} className="text-gray-400 shrink-0" />
-                  : scene.media.media_type === "stock_video"
-                    ? <Video size={12} className="text-gray-400 shrink-0" />
-                    : <Image size={12} className="text-gray-400 shrink-0" />}
-                <span className="text-xs text-gray-400 flex-1">
-                  비주얼 없음
-                  {scene.media.media_type === "ai_image" && " · 외부 생성 후 업로드"}
-                </span>
                 {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
-                  <button onClick={copyImagePrompt}
-                    className={`flex items-center gap-1 text-xs transition-colors ${
-                      promptCopied ? "text-emerald-600" : "text-gray-500 hover:text-indigo-600"
-                    }`}
-                    title="이미지 프롬프트 복사 (스타일 포함)">
-                    {promptCopied
-                      ? <><Check size={11} /> 복사됨</>
-                      : <><Copy size={11} /> 프롬프트</>
-                    }
-                  </button>
+                  <p className="text-xs font-mono opacity-75 leading-relaxed">{scene.media.ai_image_prompt}</p>
                 )}
-                <button onClick={pasteVisualFromClipboard} disabled={visualUploading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                  title="클립보드의 이미지 붙여넣기">
-                  <ClipboardPaste size={11} /> 붙여넣기
-                </button>
-                <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  {visualUploading
-                    ? <><Loader2 size={11} className="animate-spin" /> 업로드 중...</>
-                    : <><Upload size={11} /> 업로드</>
-                  }
-                </button>
+                {scene.media.stock_keywords && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap gap-1 flex-1">
+                      {scene.media.stock_keywords.map(kw => (
+                        <span key={kw} className="text-xs bg-white/60 rounded px-1.5 py-0.5 border border-current/20">{kw}</span>
+                      ))}
+                    </div>
+                    {(scene.media.media_type === "stock_photo" || scene.media.media_type === "stock_video") && (
+                      <button onClick={() => setShowStockSearch(true)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 text-xs font-medium hover:bg-white shrink-0 border border-current/20">
+                        <SearchIcon size={11} /> 스톡 검색
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-              {visualError && (
-                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2 leading-relaxed break-words">
-                  {visualError}
+            )}
+
+            {/* 오디오 */}
+            <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+              {audioUrl ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Play size={12} className="text-emerald-600 shrink-0" />
+                    <span className="text-xs font-medium text-emerald-700">오디오 · {scene.estimated_duration.toFixed(1)}초</span>
+                    <div className="flex-1" />
+                    <button onClick={generateAudio} disabled={audioLoading || batchDisableRegenerate}
+                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
+                      {audioLoading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 재생성
+                    </button>
+                    <button onClick={deleteAudio} className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500">
+                      <Trash size={11} />
+                    </button>
+                  </div>
+                  <audio ref={audioRef} src={audioUrl} controls
+                    className="w-full h-8 [&::-webkit-media-controls-panel]:bg-white" />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Mic2 size={12} className="text-gray-400 shrink-0" />
+                    <span className="text-xs text-gray-400 flex-1">오디오 없음</span>
+                    <button onClick={generateAudio} disabled={audioLoading || batchDisableGenerate}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">
+                      {audioLoading ? <><Loader2 size={11} className="animate-spin" /> 생성 중...</> : <><Mic2 size={11} /> 오디오 생성</>}
+                    </button>
+                  </div>
+                  {audioError && <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-2.5 py-2 break-words">{audioError}</div>}
                 </div>
               )}
             </div>
-          )}
+
+            {/* 자막 */}
+            <SubtitleEditor
+              projectId={projectId}
+              sceneId={scene.scene_id}
+              hasAudio={!!audioUrl}
+              cues={scene.assets?.subtitle ?? null}
+              onChange={onSubtitleUpdate}
+            />
+          </div>
+
+          {/* ── 오른쪽: 비주얼 · 렌더 영상 ── */}
+          <div className="w-52 shrink-0 flex flex-col gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/mp4,video/webm,video/quicktime"
+              className="hidden"
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) uploadVisual(f);
+                e.target.value = "";
+              }}
+            />
+
+            {/* 비주얼 */}
+            <div className="rounded-xl border border-gray-100 bg-gray-50 px-2.5 py-2">
+              {/* 비주얼 헤더 버튼들 */}
+              <div className="flex items-center gap-1 mb-1.5">
+                {visualUrl
+                  ? (visualIsVideo ? <Video size={11} className="text-emerald-600" /> : <Image size={11} className="text-emerald-600" />)
+                  : (scene.media.media_type === "ai_image" ? <Sparkles size={11} className="text-gray-400" />
+                    : scene.media.media_type === "stock_video" ? <Video size={11} className="text-gray-400" />
+                    : <Image size={11} className="text-gray-400" />)
+                }
+                <span className={`text-xs font-medium flex-1 truncate ${visualUrl ? "text-emerald-700" : "text-gray-400"}`}>
+                  {visualUrl ? (visualIsVideo ? "영상" : "이미지") : "비주얼 없음"}
+                </span>
+                {visualUrl ? (
+                  <>
+                    <button onClick={pasteVisualFromClipboard} disabled={visualUploading} title="클립보드 교체"
+                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40">
+                      {visualUploading ? <Loader2 size={10} className="animate-spin" /> : <ClipboardPaste size={10} />}
+                    </button>
+                    <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading} title="파일 교체"
+                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40">
+                      <RotateCcw size={10} />
+                    </button>
+                    <button onClick={deleteVisual} className="text-gray-300 hover:text-red-400">
+                      <Trash size={10} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
+                      <button onClick={copyImagePrompt} title="프롬프트 복사"
+                        className={`${promptCopied ? "text-emerald-500" : "text-gray-300 hover:text-indigo-500"}`}>
+                        {promptCopied ? <Check size={10} /> : <Copy size={10} />}
+                      </button>
+                    )}
+                    <button onClick={pasteVisualFromClipboard} disabled={visualUploading} title="클립보드 붙여넣기"
+                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40">
+                      <ClipboardPaste size={10} />
+                    </button>
+                    <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading} title="업로드"
+                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40">
+                      <Upload size={10} />
+                    </button>
+                  </>
+                )}
+              </div>
+              {visualError && <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 mb-1.5 break-words">{visualError}</div>}
+              {visualUrl ? (
+                visualIsVideo
+                  ? <video src={visualUrl} controls className="w-full rounded-lg bg-black aspect-video object-contain" />
+                  // eslint-disable-next-line @next/next/no-img-element
+                  : <img src={visualUrl} alt="비주얼" className="w-full rounded-lg bg-white aspect-video object-contain" />
+              ) : (
+                <div className="w-full aspect-video rounded-lg border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}>
+                  <Upload size={14} className="text-gray-300" />
+                  <span className="text-[10px] text-gray-300">클릭하여 업로드</span>
+                </div>
+              )}
+            </div>
+
+            {/* 렌더 영상 */}
+            <SceneRender
+              projectId={projectId}
+              sceneId={scene.scene_id}
+              hasAudio={!!audioUrl}
+              videoPath={scene.assets?.video}
+              onChange={onVideoUpdate}
+              compact
+            />
+          </div>
         </div>
-
-        {/* 장면 렌더 영역 */}
-        <SceneRender
-          projectId={projectId}
-          sceneId={scene.scene_id}
-          hasAudio={!!audioUrl}
-          videoPath={scene.assets?.video}
-          onChange={onVideoUpdate}
-        />
-
-        {/* 자막 영역 */}
-        <SubtitleEditor
-          projectId={projectId}
-          sceneId={scene.scene_id}
-          hasAudio={!!audioUrl}
-          cues={scene.assets?.subtitle ?? null}
-          onChange={onSubtitleUpdate}
-        />
 
         {/* 액션 버튼 */}
         <div className="flex items-center gap-1 px-4 pb-3 border-t border-gray-50 pt-2">

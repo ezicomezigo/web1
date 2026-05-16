@@ -102,7 +102,7 @@ export default function SubtitleEditor({
 
   if (!hasAudio) {
     return (
-      <div className="mx-4 mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+      <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <Captions size={12} />
           <span>오디오 생성 후 자막을 만들 수 있습니다</span>
@@ -112,7 +112,7 @@ export default function SubtitleEditor({
   }
 
   return (
-    <div className="mx-4 mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
+    <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Captions size={12} className={cues ? "text-emerald-600" : "text-gray-400"} />

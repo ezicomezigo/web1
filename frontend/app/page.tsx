@@ -214,6 +214,21 @@ export default function Home() {
               summary={script.trim() ? `${script.trim().slice(0, 40)}${script.length > 40 ? "..." : ""}` : "비어있음"}
             >
               <ScriptInput value={script} onChange={setScript} />
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5 mt-3">
+                  {error}
+                </div>
+              )}
+              <button
+                onClick={handleAnalyze}
+                disabled={loading || !script.trim()}
+                className="flex items-center justify-center gap-2 w-full py-3 mt-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading
+                  ? <><Loader2 size={16} className="animate-spin" /> AI가 대본을 분석 중...</>
+                  : <><Scissors size={16} /> 장면 분할 시작</>
+                }
+              </button>
             </Collapsible>
 
             <Collapsible
@@ -240,22 +255,6 @@ export default function Home() {
               <MediaRatioSlider value={mediaRatio} onChange={setMediaRatio} disabled={loading} />
             </Collapsible>
 
-            {error && (
-              <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5 mb-3">
-                {error}
-              </div>
-            )}
-
-            <button
-              onClick={handleAnalyze}
-              disabled={loading || !script.trim()}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading
-                ? <><Loader2 size={16} className="animate-spin" /> AI가 대본을 분석 중...</>
-                : <><Scissors size={16} /> 장면 분할 시작</>
-              }
-            </button>
           </div>
         )}
 
