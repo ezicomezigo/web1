@@ -56,11 +56,13 @@ class MinimaxTTS(TTSProviderBase):
 
 
 def _decode_audio(raw: str) -> bytes:
-    # MiniMax may return base64 or hex depending on version
+    # MiniMax T2A v2는 hex 인코딩으로 반환한다.
+    # hex 문자(0-9, a-f)는 모두 base64 알파벳에 속하므로 base64.b64decode가
+    # 예외 없이 잘못된 바이트를 생성해버린다 → hex를 먼저 시도해야 한다.
     try:
-        return base64.b64decode(raw)
-    except Exception:
         return bytes.fromhex(raw)
+    except ValueError:
+        return base64.b64decode(raw)
 
 
 def _mp3_duration(data: bytes) -> float:

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AIProvider, AnalyzeResponse, GeminiModel, GEMINI_MODELS, TTSSettings, GEMINI_TTS_MODELS } from "./types";
 import { useProject } from "./hooks/useProject";
+import { useLocalStorageState } from "./hooks/useLocalStorageState";
 import AISelector from "./components/AISelector";
 import ScriptInput from "./components/ScriptInput";
 import SceneEditor from "./components/SceneEditor";
@@ -24,10 +25,10 @@ export default function Home() {
     setScript, setScenes, setAnalysisInfo, clearDraft,
   } = useProject();
 
-  const [provider, setProvider] = useState<AIProvider>("claude");
-  const [geminiModel, setGeminiModel] = useState<GeminiModel>(GEMINI_MODELS[0]);
-  const [mediaRatio, setMediaRatio] = useState<MediaRatio>({ ai_image: 30, stock_photo: 30, stock_video: 40 });
-  const [ttsSettings, setTtsSettings] = useState<TTSSettings>({
+  const [provider, setProvider] = useLocalStorageState<AIProvider>("yt-ai-provider", "claude");
+  const [geminiModel, setGeminiModel] = useLocalStorageState<GeminiModel>("yt-gemini-model", GEMINI_MODELS[0]);
+  const [mediaRatio, setMediaRatio] = useLocalStorageState<MediaRatio>("yt-media-ratio", { ai_image: 30, stock_photo: 30, stock_video: 40 });
+  const [ttsSettings, setTtsSettings] = useLocalStorageState<TTSSettings>("yt-tts-settings", {
     provider: "gemini",
     model: GEMINI_TTS_MODELS[0],
     voice: "Kore",
@@ -45,7 +46,7 @@ export default function Home() {
   const [openMedia, setOpenMedia] = useState(true);
   const [openTTS, setOpenTTS] = useState(true);
   const [openImageStyle, setOpenImageStyle] = useState(true);
-  const [imageStyle, setImageStyle] = useState("");
+  const [imageStyle, setImageStyle] = useLocalStorageState<string>("yt-image-style", "");
 
   const script = project?.script ?? "";
   const scenes = project?.scenes ?? [];
