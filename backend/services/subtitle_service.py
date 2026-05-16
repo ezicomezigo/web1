@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from threading import Lock
 
@@ -20,9 +21,38 @@ MIN_DURATION_PER_CUE = 0.8
 SENTENCE_BREAK_CHARS = set(".!?。！？")
 SOFT_BREAK_CHARS = set(",;:、，;")
 
+# WHISPER_MODEL_SIZE 환경변수로 덮어쓸 수 있음 (tiny/base/small/medium/large-v3)
+_model_size = os.environ.get("WHISPER_MODEL_SIZE", "medium")
+# 모델을 심링크 없이 프로젝트 로컬 디렉터리에 저장 (Windows 권한 문제 회피)
+_model_cache_dir = Path(__file__).parent.parent / "models_cache"
+
 _model = None
 _model_lock = Lock()
-_model_size = "large-v3"
+
+
+def _ensure_model_downloaded(model_size: str) -> Path:
+    """모델을 local_dir에 심링크 없이 다운로드하고 경로를 반환한다."""
+    from huggingface_hub import snapshot_download
+
+    model_dir = _model_cache_dir / f"faster-whisper-{model_size}"
+    if model_dir.exists() and any(model_dir.iterdir()):
+        return model_dir
+
+    model_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Downloading faster-whisper-%s (this may take a while)...", model_size)
+
+    kwargs: dict = dict(
+        repo_id=f"Systran/faster-whisper-{model_size}",
+        local_dir=str(model_dir),
+    )
+    # local_dir_use_symlinks=False 는 huggingface_hub >= 0.16 에서 지원
+    # 이 옵션이 있으면 심링크 대신 파일 복사 → Windows 권한 불필요
+    import inspect
+    if "local_dir_use_symlinks" in inspect.signature(snapshot_download).parameters:
+        kwargs["local_dir_use_symlinks"] = False
+
+    snapshot_download(**kwargs)
+    return model_dir
 
 
 def _get_model():
@@ -30,10 +60,15 @@ def _get_model():
     with _model_lock:
         if _model is None:
             from faster_whisper import WhisperModel
-            logger.info("Loading faster-whisper model: %s (first call may download ~1.5GB)", _model_size)
-            # CPU + int8 양자화: 메모리 절약, 충분히 빠름. GPU 있으면 device="cuda", compute_type="float16"으로 교체.
-            _model = WhisperModel(_model_size, device="cpu", compute_type="int8")
-            logger.info("faster-whisper model loaded")
+            try:
+                model_path = _ensure_model_downloaded(_model_size)
+                logger.info("Loading faster-whisper from %s", model_path)
+                _model = WhisperModel(str(model_path), device="cpu", compute_type="int8")
+            except Exception as e:
+                # 로컬 다운로드 실패 시 기본 HF 캐시로 폴백
+                logger.warning("Local download failed (%s), falling back to HF cache", e)
+                _model = WhisperModel(_model_size, device="cpu", compute_type="int8")
+            logger.info("faster-whisper model ready")
     return _model
 
 
@@ -55,7 +90,6 @@ def transcribe_to_cues(audio_path: Path, language: str = "ko") -> list[SubtitleC
     words: list[tuple[float, float, str]] = []
     for seg in segments:
         if not seg.words:
-            # 단어 정보가 없는 세그먼트는 통째로
             words.append((seg.start, seg.end, seg.text.strip()))
             continue
         for w in seg.words:
@@ -95,7 +129,7 @@ def _group_words_to_cues(words: list[tuple[float, float, str]]) -> list[Subtitle
 
     cues.append(SubtitleCue(start=cur_start, end=cur_end, text=cur_text))
 
-    # 너무 짧은 큐는 끝 시간을 살짝 연장 (다음 큐와 겹치지 않는 한)
+    # 너무 짧은 큐는 끝 시간을 살짝 연장
     for i, cue in enumerate(cues):
         if cue.end - cue.start < MIN_DURATION_PER_CUE:
             target = cue.start + MIN_DURATION_PER_CUE

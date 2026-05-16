@@ -13,6 +13,7 @@ frontend/.env.local
 
 # Project data
 backend/projects/
+backend/models_cache/
 
 # OS
 .DS_Store
