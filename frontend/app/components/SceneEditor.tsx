@@ -34,6 +34,8 @@ export default function SceneEditor({
   const [splitTarget, setSplitTarget] = useState<number | null>(null);
   const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; sceneId: number } | null>(null);
+  const [batchErrors, setBatchErrors] = useState<{ sceneId: number; error: string }[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -52,26 +54,35 @@ export default function SceneEditor({
     ));
   }
 
-  // ─── 전체 오디오 일괄 생성 ───────────────────────────────────────────────
+  // ─── 전체 오디오 일괄 생성 (순차 호출로 진행 상황 표시) ──────────────────
   async function handleBatchGenerate() {
     if (!confirm(`${scenes.length}개 장면의 오디오를 모두 생성합니다. 계속하시겠습니까?`)) return;
     setBatchLoading(true);
+    setBatchErrors([]);
+    const errors: { sceneId: number; error: string }[] = [];
     try {
-      const res = await fetch(`${API_BASE}/api/projects/${projectId}/audio/batch`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ttsSettings),
-      });
-      if (!res.ok) throw new Error("일괄 생성 실패");
-      const results: { scene_id: number; audio_path?: string; duration?: number; ok: boolean }[] = await res.json();
-      onChange(scenes.map(s => {
-        const r = results.find(x => x.scene_id === s.scene_id);
-        if (r?.ok && r.audio_path) {
-          return { ...s, assets: { ...(s.assets ?? { visual: null }), audio: r.audio_path }, estimated_duration: r.duration ?? s.estimated_duration };
+      for (let i = 0; i < scenes.length; i++) {
+        const sc = scenes[i];
+        setBatchProgress({ current: i + 1, total: scenes.length, sceneId: sc.scene_id });
+        try {
+          const res = await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${sc.scene_id}/audio`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(ttsSettings),
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.detail ?? `HTTP ${res.status}`);
+          }
+          const data: { audio_path: string; duration: number } = await res.json();
+          handleAudioUpdate(sc.scene_id, data.audio_path, data.duration);
+        } catch (e) {
+          errors.push({ sceneId: sc.scene_id, error: e instanceof Error ? e.message : "알 수 없는 오류" });
         }
-        return s;
-      }));
+      }
     } finally {
+      setBatchProgress(null);
+      setBatchErrors(errors);
       setBatchLoading(false);
     }
   }
@@ -163,12 +174,40 @@ export default function SceneEditor({
           disabled={batchLoading || disabled}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40"
         >
-          {batchLoading
-            ? <><Loader2 size={11} className="animate-spin" /> 생성 중...</>
-            : <><Mic2 size={11} /> 전체 오디오 생성</>
+          {batchLoading && batchProgress
+            ? <><Loader2 size={11} className="animate-spin" /> 장면 {batchProgress.sceneId} ({batchProgress.current}/{batchProgress.total})</>
+            : batchLoading
+              ? <><Loader2 size={11} className="animate-spin" /> 생성 중...</>
+              : <><Mic2 size={11} /> 전체 오디오 생성</>
           }
         </button>
       </div>
+
+      {/* 진행률 바 */}
+      {batchLoading && batchProgress && (
+        <div className="mb-3">
+          <div className="h-1.5 bg-indigo-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-indigo-500 transition-all duration-300"
+              style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 배치 에러 요약 */}
+      {batchErrors.length > 0 && !batchLoading && (
+        <div className="mb-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <p className="text-xs font-semibold text-red-700 mb-1.5">{batchErrors.length}개 장면 생성 실패</p>
+          <div className="flex flex-col gap-1">
+            {batchErrors.map(e => (
+              <p key={e.sceneId} className="text-xs text-red-600 break-words">
+                <span className="font-semibold">장면 {e.sceneId}:</span> {e.error}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 원본 텍스트 검증 */}
       {warnings.length === 0 ? (
