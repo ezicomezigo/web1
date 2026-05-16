@@ -70,6 +70,10 @@ export default function Home() {
         throw new Error(data.detail || "분석 중 오류가 발생했습니다.");
       }
       const data: AnalyzeResponse = await res.json();
+      if (!data.scenes || data.scenes.length === 0) {
+        const warnMsg = data.warnings?.length ? ` (${data.warnings.join("; ")})` : "";
+        throw new Error(`AI가 장면을 생성하지 못했습니다. 다시 시도하거나 대본을 조정해주세요.${warnMsg}`);
+      }
       setScenes(data.scenes);
       setAnalysisInfo({ ai_provider: data.ai_provider, model_used: data.model_used, warnings: data.warnings });
     } catch (e) {

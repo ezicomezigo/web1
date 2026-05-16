@@ -35,7 +35,11 @@ async def analyze_with_claude(req: AnalyzeRequest) -> AnalyzeResponse:
         logger.error("Claude JSON 파싱 실패.\nraw:\n%s", message.content[0].text)
         raise ValueError(f"AI 응답을 JSON으로 파싱할 수 없습니다: {e}") from e
 
-    ranges = [SceneRange(**s) for s in data["scenes"]]
+    raw_scenes = data.get("scenes", [])
+    if not raw_scenes:
+        logger.error("Claude가 빈 scenes 배열을 반환했습니다.\nraw:\n%s", message.content[0].text)
+        raise ValueError("AI가 장면을 생성하지 못했습니다. 대본을 조정하거나 다시 시도해주세요.")
+    ranges = [SceneRange(**s) for s in raw_scenes]
     warnings = validate_coverage(sentences, [r.model_dump() for r in ranges])
     texts = reconstruct_scenes(sentences, [r.model_dump() for r in ranges])
 
