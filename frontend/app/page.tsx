@@ -119,7 +119,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-50">
       <SceneJumpNav scenes={scenes} />
-      <div className="max-w-3xl mx-auto px-4 py-10">
+      <div className="max-w-5xl mx-auto px-4 py-10">
 
         {/* 헤더 */}
         <div className="mb-6">

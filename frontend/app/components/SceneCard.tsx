@@ -345,7 +345,7 @@ export default function SceneCard({
           </div>
 
           {/* ── 오른쪽: 비주얼 · 렌더 영상 ── */}
-          <div className="w-52 shrink-0 flex flex-col gap-2">
+          <div className="w-80 shrink-0 flex flex-col gap-2">
             <input
               ref={fileInputRef}
               type="file"
