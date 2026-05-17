@@ -149,6 +149,7 @@ def _build_cmd(
 
     cmd += [
         "-vf", vf,
+        "-r", "30",
         "-c:v", "libx264",
         "-preset", "fast",
         "-crf", "23",
@@ -291,7 +292,11 @@ def _extract_ffmpeg_error(stderr: str) -> str:
 
 
 def concat_scenes(video_paths: list[Path], output_path: Path) -> Path:
-    """FFmpeg concat demuxer로 여러 장면 mp4를 하나로 합친다 (재인코딩 없음).
+    """FFmpeg concat filter로 여러 장면 mp4를 하나로 합친다.
+
+    재인코딩이 발생하므로 다소 느리지만, 입력 영상들의 framerate/timebase/pixfmt가
+    달라도 항상 정상 출력된다. (concat demuxer + -c copy는 파라미터 불일치 시
+    오디오만 계속되고 비디오가 멈추는 문제가 발생함)
 
     Args:
         video_paths: 합칠 mp4 파일들의 절대 경로 목록 (순서대로 이어붙임)
@@ -302,31 +307,51 @@ def concat_scenes(video_paths: list[Path], output_path: Path) -> Path:
     """
     ffmpeg = check_ffmpeg()
 
-    # concat 리스트 파일을 출력 파일과 같은 디렉토리에 임시로 저장
-    list_file = output_path.parent / "concat_list.txt"
-    lines: list[str] = []
-    for p in video_paths:
-        # 절대 경로 사용, 백슬래시 → 슬래시 변환 (Windows 호환)
-        abs_path = str(p.resolve()).replace("\\", "/")
-        lines.append(f"file '{abs_path}'")
-    list_file.write_text("\n".join(lines), encoding="utf-8")
+    if not video_paths:
+        raise RuntimeError("합칠 영상이 없습니다.")
 
-    cmd = [
-        ffmpeg, "-y",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", str(list_file),
-        "-c", "copy",
+    n = len(video_paths)
+    cmd: list[str] = [ffmpeg, "-y"]
+
+    # 각 입력을 -i로 추가
+    for p in video_paths:
+        cmd += ["-i", str(p)]
+
+    # concat filter: [0:v:0][0:a:0][1:v:0][1:a:0]...concat=n=N:v=1:a=1[outv][outa]
+    # 각 입력의 비디오/오디오를 동일 파라미터로 정규화한 뒤 이어붙임
+    fps = 30
+    inputs_video = "".join(
+        f"[{i}:v:0]scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=decrease,"
+        f"pad={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:(ow-iw)/2:(oh-ih)/2:black,"
+        f"setsar=1,fps={fps}[v{i}];"
+        for i in range(n)
+    )
+    inputs_audio = "".join(f"[{i}:a:0]aresample=async=1[a{i}];" for i in range(n))
+    concat_inputs = "".join(f"[v{i}][a{i}]" for i in range(n))
+    filter_complex = (
+        f"{inputs_video}{inputs_audio}"
+        f"{concat_inputs}concat=n={n}:v=1:a=1[outv][outa]"
+    )
+
+    cmd += [
+        "-filter_complex", filter_complex,
+        "-map", "[outv]",
+        "-map", "[outa]",
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-crf", "23",
+        "-r", str(fps),
+        "-c:a", "aac",
+        "-ac", "2",
+        "-b:a", "192k",
+        "-pix_fmt", "yuv420p",
         str(output_path),
     ]
 
-    logger.info("Concatenating %d scenes → %s", len(video_paths), output_path)
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
-        if result.returncode != 0:
-            logger.error("ffmpeg concat stderr:\n%s", result.stderr[-3000:])
-            raise RuntimeError(_extract_ffmpeg_error(result.stderr))
-    finally:
-        list_file.unlink(missing_ok=True)
+    logger.info("Concatenating %d scenes → %s", n, output_path)
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if result.returncode != 0:
+        logger.error("ffmpeg concat stderr:\n%s", result.stderr[-3000:])
+        raise RuntimeError(_extract_ffmpeg_error(result.stderr))
 
     return output_path
