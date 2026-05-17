@@ -288,3 +288,45 @@ def _extract_ffmpeg_error(stderr: str) -> str:
         if any(k in line.lower() for k in ("error", "invalid", "no such", "failed", "unable")):
             return line.strip()
     return lines[-1].strip() if lines else "알 수 없는 ffmpeg 오류"
+
+
+def concat_scenes(video_paths: list[Path], output_path: Path) -> Path:
+    """FFmpeg concat demuxer로 여러 장면 mp4를 하나로 합친다 (재인코딩 없음).
+
+    Args:
+        video_paths: 합칠 mp4 파일들의 절대 경로 목록 (순서대로 이어붙임)
+        output_path: 최종 출력 파일 경로
+
+    Returns:
+        output_path
+    """
+    ffmpeg = check_ffmpeg()
+
+    # concat 리스트 파일을 출력 파일과 같은 디렉토리에 임시로 저장
+    list_file = output_path.parent / "concat_list.txt"
+    lines: list[str] = []
+    for p in video_paths:
+        # 절대 경로 사용, 백슬래시 → 슬래시 변환 (Windows 호환)
+        abs_path = str(p.resolve()).replace("\\", "/")
+        lines.append(f"file '{abs_path}'")
+    list_file.write_text("\n".join(lines), encoding="utf-8")
+
+    cmd = [
+        ffmpeg, "-y",
+        "-f", "concat",
+        "-safe", "0",
+        "-i", str(list_file),
+        "-c", "copy",
+        str(output_path),
+    ]
+
+    logger.info("Concatenating %d scenes → %s", len(video_paths), output_path)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if result.returncode != 0:
+            logger.error("ffmpeg concat stderr:\n%s", result.stderr[-3000:])
+            raise RuntimeError(_extract_ffmpeg_error(result.stderr))
+    finally:
+        list_file.unlink(missing_ok=True)
+
+    return output_path

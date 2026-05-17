@@ -13,6 +13,7 @@ import { renumber, estimateDuration, DEFAULT_MEDIA } from "../utils/sceneOps";
 import SceneCard from "./SceneCard";
 import SplitSceneModal from "./SplitSceneModal";
 import AddSceneModal from "./AddSceneModal";
+import FinalRenderPanel from "./FinalRenderPanel";
 import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2, Download, Captions, Clapperboard, FolderOpen } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -382,6 +383,11 @@ export default function SceneEditor({
               <span key={i} className="text-red-600 break-words">{e}</span>
             ))}
           </div>
+        )}
+
+        {/* 최종 영상 내보내기 패널 (렌더링 완료 장면이 1개 이상일 때) */}
+        {scenes.some(s => s.assets?.video) && (
+          <FinalRenderPanel projectId={projectId} scenes={scenes} />
         )}
       </div>
 
