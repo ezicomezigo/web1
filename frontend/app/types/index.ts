@@ -138,6 +138,8 @@ export interface RenderSettings {
   subtitle_font_name: string | null; // null → 플랫폼 기본 한글 폰트
   subtitle_outline: number;          // 자막 외곽선 두께
   subtitle_max_chars: number | null; // 한 줄 최대 글자수 강제 지정 (null → 자동)
+  subtitle_bold: boolean;            // 볼드체
+  subtitle_color: string;            // 폰트 색상 (#RRGGBB hex)
 }
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
@@ -145,4 +147,6 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   subtitle_font_name: null,
   subtitle_outline: 2,
   subtitle_max_chars: null,
+  subtitle_bold: false,
+  subtitle_color: "#FFFFFF",
 };

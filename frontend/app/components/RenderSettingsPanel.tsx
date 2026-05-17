@@ -101,6 +101,38 @@ export default function RenderSettingsPanel({ value, onChange }: Props) {
 
       </div>
 
+      {/* 볼드 + 폰트 색상 */}
+      <div className="flex items-center gap-5">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={value.subtitle_bold}
+            onChange={e => onChange({ ...value, subtitle_bold: e.target.checked })}
+            className="w-4 h-4 accent-indigo-500"
+          />
+          <span className="text-xs font-medium text-gray-600">볼드체</span>
+        </label>
+
+        <label className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-600 shrink-0">폰트 색상</span>
+          <input
+            type="color"
+            value={value.subtitle_color}
+            onChange={e => onChange({ ...value, subtitle_color: e.target.value })}
+            className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0.5"
+          />
+          <span className="text-xs text-gray-400 font-mono">{value.subtitle_color.toUpperCase()}</span>
+          {value.subtitle_color.toUpperCase() !== "#FFFFFF" && (
+            <button
+              onClick={() => onChange({ ...value, subtitle_color: "#FFFFFF" })}
+              className="text-xs text-gray-400 hover:text-gray-600 underline"
+            >
+              초기화
+            </button>
+          )}
+        </label>
+      </div>
+
       {/* 한 줄 글자수 강제 지정 */}
       <label className="flex items-center gap-3">
         <span className="text-xs font-medium text-gray-600 shrink-0">한 줄 최대 글자수</span>

@@ -180,13 +180,25 @@ def _default_font() -> str:
         return "Noto Sans CJK KR"
 
 
+def _hex_to_ass_color(hex_color: str) -> str:
+    """hex RGB (#RRGGBB) → ASS BGR color (&H00BBGGRR)."""
+    h = hex_color.lstrip("#")
+    if len(h) != 6:
+        return "&H00FFFFFF"
+    r, g, b = h[0:2], h[2:4], h[4:6]
+    return f"&H00{b}{g}{r}".upper()
+
+
 def _subtitle_style(settings: RenderSettings) -> str:
-    """ASS 스타일 — 한국어 폰트 우선, 흰색 자막, 테두리."""
+    """ASS 스타일 — 한국어 폰트 우선, 테두리."""
     font = settings.subtitle_font_name or _default_font()
+    color = _hex_to_ass_color(settings.subtitle_color)
+    bold = "1" if settings.subtitle_bold else "0"
     return (
         f"FontName={font},"
         f"FontSize={settings.subtitle_font_size},"
-        "PrimaryColour=&H00FFFFFF,"
+        f"Bold={bold},"
+        f"PrimaryColour={color},"
         "OutlineColour=&H00000000,"
         f"Outline={settings.subtitle_outline},"
         "Alignment=2,"

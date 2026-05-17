@@ -74,3 +74,5 @@ class RenderSettings(BaseModel):
     subtitle_font_name: str | None = None  # None → 플랫폼 기본 한글 폰트
     subtitle_outline: int = 2            # 자막 외곽선 두께
     subtitle_max_chars: int | None = None  # 한 줄 최대 글자수 강제 지정 (None → 폰트 크기로 자동 계산)
+    subtitle_bold: bool = False          # 볼드체
+    subtitle_color: str = "#FFFFFF"      # 폰트 색상 (hex RGB, 예: "#FFFFFF")
