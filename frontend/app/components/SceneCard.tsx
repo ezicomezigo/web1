@@ -31,6 +31,7 @@ interface Props {
   onVisualUpdate: (sceneId: number, visualPath: string | null) => void;
   onSubtitleUpdate: (sceneId: number, cues: SubtitleCue[] | null) => void;
   onVideoUpdate: (sceneId: number, videoPath: string | null) => void;
+  videoVersion?: number;
   onSplit: () => void;
   onMerge: (dir: "up" | "down") => void;
   onDelete: () => void;
@@ -55,7 +56,7 @@ function durationColor(sec: number) {
 }
 
 export default function SceneCard({
-  scene, index, total, projectId, ttsSettings, batchMode, imageStyle, renderSettings,
+  scene, index, total, projectId, ttsSettings, batchMode, imageStyle, renderSettings, videoVersion = 0,
   onUpdate, onAudioUpdate, onVisualUpdate, onSubtitleUpdate, onVideoUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -435,6 +436,7 @@ export default function SceneCard({
               videoPath={scene.assets?.video}
               onChange={onVideoUpdate}
               settings={renderSettings}
+              externalVersion={videoVersion}
               compact
             />
           </div>

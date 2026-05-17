@@ -14,15 +14,17 @@ interface Props {
   onChange: (sceneId: number, videoPath: string | null) => void;
   settings?: RenderSettings;
   compact?: boolean;
+  externalVersion?: number;  // 배치 렌더 완료 시 부모가 올리는 버전 (캐시 무효화)
 }
 
-export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, onChange, settings, compact = false }: Props) {
+export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, onChange, settings, compact = false, externalVersion = 0 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
 
+  const totalVersion = version + externalVersion;
   const videoUrl = videoPath
-    ? `${API_BASE}/api/projects/${projectId}/${videoPath}${version ? `?v=${version}` : ""}`
+    ? `${API_BASE}/api/projects/${projectId}/${videoPath}${totalVersion ? `?v=${totalVersion}` : ""}`
     : null;
 
   async function render() {

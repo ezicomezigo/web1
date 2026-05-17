@@ -44,6 +44,7 @@ export default function SceneEditor({
   const [batchMode, setBatchMode] = useState<"all" | "missing" | null>(null);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; sceneId: number } | null>(null);
   const [batchErrors, setBatchErrors] = useState<{ sceneId: number; error: string }[]>([]);
+  const [videoVersions, setVideoVersions] = useState<Record<number, number>>({});
   const batchLoading = batchType !== null;
 
   const sensors = useSensors(
@@ -85,6 +86,9 @@ export default function SceneEditor({
       ? { ...s, assets: { ...(s.assets ?? { audio: null, visual: null }), video: videoPath } }
       : s
     ));
+    if (videoPath) {
+      setVideoVersions(prev => ({ ...prev, [sceneId]: (prev[sceneId] ?? 0) + 1 }));
+    }
   }
 
   // ─── 배치 작업 공통 헬퍼 ─────────────────────────────────────────────────
@@ -460,6 +464,7 @@ export default function SceneEditor({
               batchMode={batchLoading ? batchMode : null}
               imageStyle={imageStyle}
               renderSettings={renderSettings}
+              videoVersion={videoVersions[scene.scene_id] ?? 0}
               onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
               onAudioUpdate={handleAudioUpdate}
               onVisualUpdate={handleVisualUpdate}
