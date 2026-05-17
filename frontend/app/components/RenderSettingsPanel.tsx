@@ -18,6 +18,8 @@ const FONT_PRESETS = [
 ];
 
 export default function RenderSettingsPanel({ value, onChange }: Props) {
+  const color = value.subtitle_color ?? "#FFFFFF";
+  const bold = value.subtitle_bold ?? false;
   const currentPreset = FONT_PRESETS.find(p => p.value === value.subtitle_font_name);
   const isCustom = !currentPreset;
 
@@ -106,7 +108,7 @@ export default function RenderSettingsPanel({ value, onChange }: Props) {
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox"
-            checked={value.subtitle_bold}
+            checked={bold}
             onChange={e => onChange({ ...value, subtitle_bold: e.target.checked })}
             className="w-4 h-4 accent-indigo-500"
           />
@@ -117,12 +119,12 @@ export default function RenderSettingsPanel({ value, onChange }: Props) {
           <span className="text-xs font-medium text-gray-600 shrink-0">폰트 색상</span>
           <input
             type="color"
-            value={value.subtitle_color}
+            value={color}
             onChange={e => onChange({ ...value, subtitle_color: e.target.value })}
             className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0.5"
           />
-          <span className="text-xs text-gray-400 font-mono">{value.subtitle_color.toUpperCase()}</span>
-          {value.subtitle_color.toUpperCase() !== "#FFFFFF" && (
+          <span className="text-xs text-gray-400 font-mono">{color.toUpperCase()}</span>
+          {color.toUpperCase() !== "#FFFFFF" && (
             <button
               onClick={() => onChange({ ...value, subtitle_color: "#FFFFFF" })}
               className="text-xs text-gray-400 hover:text-gray-600 underline"
