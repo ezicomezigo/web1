@@ -4,17 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { AIProvider, AnalyzeResponse, GeminiModel, GEMINI_MODELS, TTSSettings, GEMINI_TTS_MODELS, RenderSettings, DEFAULT_RENDER_SETTINGS } from "./types";
 import { useProject } from "./hooks/useProject";
 import { useLocalStorageState } from "./hooks/useLocalStorageState";
-import AISelector from "./components/AISelector";
 import ScriptInput from "./components/ScriptInput";
 import SceneEditor from "./components/SceneEditor";
-import MediaRatioSlider, { MediaRatio } from "./components/MediaRatioSlider";
-import TTSSettingsPanel from "./components/TTSSettings";
-import RenderSettingsPanel from "./components/RenderSettingsPanel";
+import { MediaRatio } from "./components/MediaRatioSlider";
 import ProjectBar from "./components/ProjectBar";
 import ProjectListModal from "./components/ProjectListModal";
-import Collapsible from "./components/Collapsible";
 import SceneJumpNav from "./components/SceneJumpNav";
-import ImageStylePanel from "./components/ImageStylePanel";
 import SettingsDrawer from "./components/SettingsDrawer";
 import { Loader2, Scissors, FolderPlus } from "lucide-react";
 
@@ -42,13 +37,7 @@ export default function Home() {
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
 
-  // 접기/펴기 상태 (장면 생성 후 자동 접힘)
   const [openScript, setOpenScript] = useState(true);
-  const [openAI, setOpenAI] = useState(true);
-  const [openMedia, setOpenMedia] = useState(true);
-  const [openTTS, setOpenTTS] = useState(true);
-  const [openImageStyle, setOpenImageStyle] = useState(true);
-  const [openRender, setOpenRender] = useState(true);
   const [imageStyle, setImageStyle] = useLocalStorageState<string>("yt-image-style", "");
   const [renderSettings, setRenderSettings] = useLocalStorageState<RenderSettings>("yt-render-settings", DEFAULT_RENDER_SETTINGS);
 
@@ -56,16 +45,11 @@ export default function Home() {
   const scenes = project?.scenes ?? [];
   const analysisInfo = project?.analysis_info ?? null;
 
-  // 장면이 0 → 1개 이상으로 처음 바뀔 때 입력/설정 패널 자동 접기
+  // 장면이 0 → 1개 이상으로 처음 바뀔 때 대본 패널 자동 접기
   const hadScenesRef = useRef(false);
   useEffect(() => {
     if (!hadScenesRef.current && scenes.length > 0) {
       setOpenScript(false);
-      setOpenAI(false);
-      setOpenMedia(false);
-      setOpenTTS(false);
-      setOpenImageStyle(false);
-      setOpenRender(false);
     }
     hadScenesRef.current = scenes.length > 0;
   }, [scenes.length]);
@@ -212,106 +196,57 @@ export default function Home() {
         {/* 입력 패널 (프로젝트 열린 경우만) */}
         {project && (
           <div className="mb-6">
-            <Collapsible
-              title="대본 입력"
-              open={openScript}
-              onToggle={() => setOpenScript(v => !v)}
-              summary={script.trim() ? `${script.trim().slice(0, 40)}${script.length > 40 ? "..." : ""}` : "비어있음"}
-            >
-              <ScriptInput value={script} onChange={setScript} />
-              {error && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5 mt-3">
-                  {error}
-                </div>
-              )}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
               <button
-                onClick={handleAnalyze}
-                disabled={loading || !script.trim()}
-                className="flex items-center justify-center gap-2 w-full py-3 mt-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-2 w-full text-left mb-3"
+                onClick={() => setOpenScript(v => !v)}
               >
-                {loading
-                  ? <><Loader2 size={16} className="animate-spin" /> AI가 대본을 분석 중...</>
-                  : <><Scissors size={16} /> 장면 분할 시작</>
-                }
+                <span className="text-sm font-semibold text-gray-700">대본 입력</span>
+                {!openScript && script.trim() && (
+                  <span className="text-xs text-gray-400 truncate">{script.trim().slice(0, 50)}{script.length > 50 ? "..." : ""}</span>
+                )}
+                <span className="ml-auto text-gray-300 text-xs">{openScript ? "▲" : "▼"}</span>
               </button>
-            </Collapsible>
-
-            <Collapsible
-              title="AI 모델 설정"
-              open={openAI}
-              onToggle={() => setOpenAI(v => !v)}
-              summary={provider === "claude" ? "Claude" : `Gemini · ${geminiModel}`}
-            >
-              <AISelector
-                provider={provider}
-                geminiModel={geminiModel}
-                disabled={loading}
-                onProviderChange={setProvider}
-                onGeminiModelChange={setGeminiModel}
-              />
-            </Collapsible>
-
-            <Collapsible
-              title="미디어 비율 설정"
-              open={openMedia}
-              onToggle={() => setOpenMedia(v => !v)}
-              summary={`AI ${mediaRatio.ai_image}% · 사진 ${mediaRatio.stock_photo}% · 영상 ${mediaRatio.stock_video}%`}
-            >
-              <MediaRatioSlider value={mediaRatio} onChange={setMediaRatio} disabled={loading} />
-            </Collapsible>
-
+              {openScript && (
+                <>
+                  <ScriptInput value={script} onChange={setScript} />
+                  {error && (
+                    <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2.5 mt-3">
+                      {error}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={loading || !script.trim()}
+                    className="flex items-center justify-center gap-2 w-full py-3 mt-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {loading
+                      ? <><Loader2 size={16} className="animate-spin" /> AI가 대본을 분석 중...</>
+                      : <><Scissors size={16} /> 장면 분할 시작</>
+                    }
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
-        {/* TTS 설정 + 장면 편집 */}
+        {/* 장면 편집 */}
         {project && analysisInfo && scenes.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <Collapsible
-              title="TTS 설정"
-              open={openTTS}
-              onToggle={() => setOpenTTS(v => !v)}
-              summary={`${ttsSettings.provider === "gemini" ? "Gemini" : "MiniMax"} · ${ttsSettings.model} · ${ttsSettings.voice}`}
-            >
-              <TTSSettingsPanel value={ttsSettings} onChange={setTtsSettings} disabled={loading} />
-            </Collapsible>
-
-            <Collapsible
-              title="AI 이미지 스타일 & 프롬프트 추출"
-              open={openImageStyle}
-              onToggle={() => setOpenImageStyle(v => !v)}
-              summary={imageStyle.trim() ? imageStyle.slice(0, 50) + (imageStyle.length > 50 ? "..." : "") : "스타일 미설정"}
-            >
-              <ImageStylePanel
-                style={imageStyle}
-                onStyleChange={setImageStyle}
-                scenes={scenes}
-              />
-            </Collapsible>
-
-            <Collapsible
-              title="렌더 · 자막 설정"
-              open={openRender}
-              onToggle={() => setOpenRender(v => !v)}
-              summary={`자막 ${renderSettings.subtitle_font_size}px · ${renderSettings.subtitle_font_name ?? "기본 폰트"}`}
-            >
-              <RenderSettingsPanel value={renderSettings} onChange={setRenderSettings} />
-            </Collapsible>
-
-            <div className="mt-2">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">장면 편집</h2>
-              <SceneEditor
-                scenes={scenes}
-                onChange={setScenes}
-                warnings={analysisInfo.warnings}
-                aiProvider={analysisInfo.ai_provider}
-                modelUsed={analysisInfo.model_used}
-                disabled={loading}
-                projectId={project.id}
-                ttsSettings={ttsSettings}
-                imageStyle={imageStyle}
-                renderSettings={renderSettings}
-              />
-            </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">장면 편집</h2>
+            <SceneEditor
+              scenes={scenes}
+              onChange={setScenes}
+              warnings={analysisInfo.warnings}
+              aiProvider={analysisInfo.ai_provider}
+              modelUsed={analysisInfo.model_used}
+              disabled={loading}
+              projectId={project.id}
+              ttsSettings={ttsSettings}
+              imageStyle={imageStyle}
+              renderSettings={renderSettings}
+            />
           </div>
         )}
       </div>
