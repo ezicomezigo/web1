@@ -147,19 +147,19 @@ export default function SubtitleEditor({
               ? `자막 ${cues.length}개 ${expanded ? "▲" : "▼"}`
               : "자막 없음"}
           </button>
-          {saving && <Loader2 size={11} className="animate-spin text-gray-400" />}
+          {saving && <Loader2 size={11} className="animate-spin text-indigo-400" />}
           {cues ? (
             <>
               <button onClick={correctWithScript} disabled={correcting || loading}
                 title="대본 텍스트로 인식 오류 교정 (타임스탬프 유지)"
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-600 disabled:opacity-40">
+                className="flex items-center gap-1 text-xs text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 px-1.5 py-0.5 rounded disabled:opacity-40 transition-colors">
                 {correcting ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />} 보정
               </button>
               <button onClick={generate} disabled={loading || correcting}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
+                className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 px-1.5 py-0.5 rounded disabled:opacity-40 transition-colors">
                 {loading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 재생성
               </button>
-              <button onClick={deleteSubtitle} className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500">
+              <button onClick={deleteSubtitle} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 px-1.5 py-0.5 rounded transition-colors">
                 <Trash size={11} />
               </button>
             </>

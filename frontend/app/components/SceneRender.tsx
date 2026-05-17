@@ -84,10 +84,10 @@ export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, o
         {videoUrl ? (
           <>
             <button onClick={render} disabled={loading} title="재렌더"
-              className="text-gray-300 hover:text-indigo-500 disabled:opacity-40 p-0.5">
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+              className="p-1 rounded text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-40 transition-colors">
+              {loading ? <Loader2 size={14} className="animate-spin text-indigo-500" /> : <RotateCcw size={14} />}
             </button>
-            <button onClick={deleteRender} title="삭제" className="text-gray-300 hover:text-red-400 p-0.5">
+            <button onClick={deleteRender} title="삭제" className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">
               <Trash size={14} />
             </button>
           </>
@@ -99,6 +99,12 @@ export default function SceneRender({ projectId, sceneId, hasAudio, videoPath, o
           </button>
         )}
       </div>
+      {loading && (
+        <div className="flex items-center gap-2 mb-1.5 px-2 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg">
+          <Loader2 size={13} className="animate-spin text-indigo-500 shrink-0" />
+          <span className="text-xs text-indigo-600 font-medium">렌더링 중...</span>
+        </div>
+      )}
       {error && <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 mb-1.5 break-words">{error}</div>}
       {videoUrl && <video key={videoUrl} src={videoUrl} controls className="w-full rounded-lg bg-black aspect-video" />}
     </div>

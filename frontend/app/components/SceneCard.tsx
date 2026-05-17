@@ -310,10 +310,10 @@ export default function SceneCard({
                     <span className="text-xs font-medium text-emerald-700">오디오 · {scene.estimated_duration.toFixed(1)}초</span>
                     <div className="flex-1" />
                     <button onClick={generateAudio} disabled={audioLoading || batchDisableRegenerate}
-                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 disabled:opacity-40">
+                      className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-600 disabled:opacity-40 px-1.5 py-0.5 rounded hover:bg-indigo-50 transition-colors">
                       {audioLoading ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} 재생성
                     </button>
-                    <button onClick={deleteAudio} className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500">
+                    <button onClick={deleteAudio} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 px-1.5 py-0.5 rounded hover:bg-red-50 transition-colors">
                       <Trash size={11} />
                     </button>
                   </div>
@@ -375,14 +375,14 @@ export default function SceneCard({
                 {visualUrl ? (
                   <>
                     <button onClick={pasteVisualFromClipboard} disabled={visualUploading} title="클립보드 교체"
-                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40 p-0.5">
+                      className="p-1 rounded text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-40 transition-colors">
                       {visualUploading ? <Loader2 size={14} className="animate-spin" /> : <ClipboardPaste size={14} />}
                     </button>
                     <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading} title="파일 교체"
-                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40 p-0.5">
+                      className="p-1 rounded text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-40 transition-colors">
                       <RotateCcw size={14} />
                     </button>
-                    <button onClick={deleteVisual} className="text-gray-300 hover:text-red-400 p-0.5">
+                    <button onClick={deleteVisual} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">
                       <Trash size={14} />
                     </button>
                   </>
@@ -390,16 +390,16 @@ export default function SceneCard({
                   <>
                     {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
                       <button onClick={copyImagePrompt} title="프롬프트 복사"
-                        className={`p-0.5 ${promptCopied ? "text-emerald-500" : "text-gray-300 hover:text-indigo-500"}`}>
+                        className={`p-1 rounded transition-colors ${promptCopied ? "text-emerald-500" : "text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50"}`}>
                         {promptCopied ? <Check size={14} /> : <Copy size={14} />}
                       </button>
                     )}
                     <button onClick={pasteVisualFromClipboard} disabled={visualUploading} title="클립보드 붙여넣기"
-                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40 p-0.5">
+                      className="p-1 rounded text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-40 transition-colors">
                       <ClipboardPaste size={14} />
                     </button>
                     <button onClick={() => fileInputRef.current?.click()} disabled={visualUploading} title="업로드"
-                      className="text-gray-300 hover:text-indigo-500 disabled:opacity-40 p-0.5">
+                      className="p-1 rounded text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-40 transition-colors">
                       <Upload size={14} />
                     </button>
                   </>
