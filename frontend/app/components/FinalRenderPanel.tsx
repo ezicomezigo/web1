@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Scene } from "../types";
-import { Download, Film, Loader2, CheckCircle, AlertTriangle, Trash2, PlayCircle } from "lucide-react";
+import { Download, Film, Loader2, CheckCircle, AlertTriangle, Trash2, PlayCircle, Eye } from "lucide-react";
+import PreviewModal from "./PreviewModal";
 
 const API_BASE = "http://localhost:8000";
 
@@ -26,6 +27,7 @@ export default function FinalRenderPanel({ projectId, scenes }: Props) {
     scene_count: 0,
   });
   const [loading, setLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const videoSceneCount = scenes.filter(s => s.assets?.video).length;
 
@@ -143,6 +145,17 @@ export default function FinalRenderPanel({ projectId, scenes }: Props) {
 
       {/* 버튼 영역 */}
       <div className="flex gap-2 flex-wrap">
+        {/* 전체 미리보기 (장면 영상 이어 재생) */}
+        {videoSceneCount > 0 && (
+          <button
+            onClick={() => setShowPreview(true)}
+            disabled={isRunning}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40"
+            title="장면 영상들을 순서대로 이어 재생 (내보내기 없이)"
+          >
+            <Eye size={11} /> 전체 미리보기
+          </button>
+        )}
         {/* 내보내기 시작 / 다시 내보내기 */}
         {!isRunning && (
           <button
@@ -189,6 +202,14 @@ export default function FinalRenderPanel({ projectId, scenes }: Props) {
           100% { transform: translateX(400%); }
         }
       `}</style>
+
+      {showPreview && (
+        <PreviewModal
+          projectId={projectId}
+          scenes={scenes}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
   );
 }
