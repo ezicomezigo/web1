@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors,
   DragEndEvent,
@@ -13,7 +13,7 @@ import { renumber, estimateDuration, DEFAULT_MEDIA } from "../utils/sceneOps";
 import SceneCard from "./SceneCard";
 import SplitSceneModal from "./SplitSceneModal";
 import AddSceneModal from "./AddSceneModal";
-import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2, Download, Captions, Clapperboard } from "lucide-react";
+import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2, Download, Captions, Clapperboard, FolderOpen } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
 
@@ -35,6 +35,9 @@ export default function SceneEditor({
 }: Props) {
   const [splitTarget, setSplitTarget] = useState<number | null>(null);
   const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null);
+  const [importResult, setImportResult] = useState<{ ok: number; skip: number; errors: string[] } | null>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const filesInputRef = useRef<HTMLInputElement>(null);
 
   type BatchType = "audio" | "subtitle" | "render";
   const [batchType, setBatchType] = useState<BatchType | null>(null);
@@ -183,6 +186,62 @@ export default function SceneEditor({
     });
   }
 
+  // ─── 이미지 일괄 가져오기 ────────────────────────────────────────────────
+  /** 파일명에서 장면 ID 추출. 두 가지 패턴 모두 시도. */
+  function parseSceneIdFromFilename(filename: string): number | null {
+    // 패턴 2: AiCrafter_{sceneId}_{count}.ext  (대소문자 무관)
+    const m2 = filename.match(/aicrafter_(\d+)_\d+/i);
+    if (m2) return parseInt(m2[1], 10);
+    // 패턴 1: {sceneId}_anything.ext  (파일명이 숫자로 시작)
+    const m1 = filename.match(/^(\d+)_/);
+    if (m1) return parseInt(m1[1], 10);
+    return null;
+  }
+
+  async function handleImageImport(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setImportResult(null);
+
+    // 장면 ID → 파일 매핑 (같은 장면에 여러 파일이면 마지막 파일 사용)
+    const sceneIdToFile = new Map<number, File>();
+    const unmatched: string[] = [];
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/") && !file.name.match(/\.(jfif|webp|avif)$/i)) continue;
+      const sid = parseSceneIdFromFilename(file.name);
+      if (sid === null) { unmatched.push(file.name); continue; }
+      sceneIdToFile.set(sid, file);
+    }
+
+    const validSceneIds = scenes.map(s => s.scene_id);
+    let ok = 0;
+    const errors: string[] = [];
+
+    for (const [sid, file] of sceneIdToFile) {
+      if (!validSceneIds.includes(sid)) {
+        errors.push(`장면 ${sid} 없음 — ${file.name}`);
+        continue;
+      }
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${sid}/visual/upload`, {
+          method: "POST", body: form,
+        });
+        if (!res.ok) {
+          const b = await res.json().catch(() => ({}));
+          throw new Error(b.detail ?? `HTTP ${res.status}`);
+        }
+        const data: { visual_path: string } = await res.json();
+        handleVisualUpdate(sid, data.visual_path);
+        ok++;
+      } catch (e) {
+        errors.push(`장면 ${sid}: ${e instanceof Error ? e.message : "업로드 실패"} — ${file.name}`);
+      }
+    }
+
+    setImportResult({ ok, skip: unmatched.length, errors });
+  }
+
   // ─── 드래그앤드롭 ────────────────────────────────────────────────────────
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
@@ -272,7 +331,7 @@ export default function SceneEditor({
             </a>
           )}
         </div>
-        {/* 일괄 생성 버튼 3종 */}
+        {/* 일괄 생성 버튼 */}
         <div className="flex gap-2 flex-wrap">
           <button onClick={handleBatchAudio} disabled={batchLoading || disabled}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40">
@@ -292,8 +351,48 @@ export default function SceneEditor({
               ? <><Loader2 size={11} className="animate-spin" /> 렌더 {batchProgress.current}/{batchProgress.total}</>
               : <><Clapperboard size={11} /> 전체 렌더링</>}
           </button>
+
+          {/* 이미지 일괄 가져오기 */}
+          <div className="flex gap-1">
+            <button onClick={() => folderInputRef.current?.click()} disabled={batchLoading || disabled}
+              title="폴더를 선택해 파일명의 장면번호로 자동 매핑"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-medium hover:bg-amber-600 disabled:opacity-40">
+              <FolderOpen size={11} /> 이미지 폴더 가져오기
+            </button>
+            <button onClick={() => filesInputRef.current?.click()} disabled={batchLoading || disabled}
+              title="파일을 직접 선택해 장면번호로 자동 매핑"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-400 text-amber-700 text-xs font-medium hover:bg-amber-50 disabled:opacity-40">
+              파일 선택
+            </button>
+          </div>
         </div>
+
+        {/* 이미지 가져오기 결과 */}
+        {importResult && (
+          <div className={`text-xs rounded-lg px-3 py-2 flex flex-col gap-0.5 ${importResult.errors.length > 0 ? "bg-amber-50 border border-amber-100" : "bg-emerald-50 border border-emerald-100"}`}>
+            <span className={importResult.errors.length > 0 ? "text-amber-700 font-medium" : "text-emerald-700 font-medium"}>
+              이미지 가져오기 완료: {importResult.ok}개 적용
+              {importResult.skip > 0 && ` · 패턴 불일치 ${importResult.skip}개 건너뜀`}
+            </span>
+            {importResult.errors.map((e, i) => (
+              <span key={i} className="text-red-600 break-words">{e}</span>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* 숨김 파일 인풋 — 폴더 선택 */}
+      <input ref={folderInputRef} type="file" className="hidden" multiple
+        /* @ts-expect-error webkitdirectory is non-standard */
+        webkitdirectory=""
+        accept="image/*,.jfif,.webp,.avif"
+        onChange={e => { handleImageImport(e.target.files); e.target.value = ""; }}
+      />
+      {/* 숨김 파일 인풋 — 파일 다중 선택 */}
+      <input ref={filesInputRef} type="file" className="hidden" multiple
+        accept="image/*,.jfif,.webp,.avif"
+        onChange={e => { handleImageImport(e.target.files); e.target.value = ""; }}
+      />
 
       {/* 진행률 바 */}
       {batchLoading && batchProgress && (
