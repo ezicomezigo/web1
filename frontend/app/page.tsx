@@ -15,6 +15,7 @@ import ProjectListModal from "./components/ProjectListModal";
 import Collapsible from "./components/Collapsible";
 import SceneJumpNav from "./components/SceneJumpNav";
 import ImageStylePanel from "./components/ImageStylePanel";
+import SettingsDrawer from "./components/SettingsDrawer";
 import { Loader2, Scissors, FolderPlus } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -314,6 +315,26 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* 설정 드로어 (항상 렌더, 프로젝트 있을 때만 의미있음) */}
+      {project && (
+        <SettingsDrawer
+          scenes={scenes}
+          disabled={loading}
+          provider={provider}
+          onProviderChange={setProvider}
+          geminiModel={geminiModel}
+          onGeminiModelChange={setGeminiModel}
+          mediaRatio={mediaRatio}
+          onMediaRatioChange={setMediaRatio}
+          ttsSettings={ttsSettings}
+          onTtsChange={setTtsSettings}
+          imageStyle={imageStyle}
+          onImageStyleChange={setImageStyle}
+          renderSettings={renderSettings}
+          onRenderSettingsChange={setRenderSettings}
+        />
+      )}
 
       {/* 프로젝트 목록 모달 */}
       {showProjects && (
