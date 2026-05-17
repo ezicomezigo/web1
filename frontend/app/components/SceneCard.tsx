@@ -162,7 +162,8 @@ export default function SceneCard({
   function copyImagePrompt() {
     const base = scene.media.ai_image_prompt?.trim() ?? "";
     if (!base) return;
-    const full = imageStyle.trim() ? `${base}, ${imageStyle.trim()}` : base;
+    const tag = `PT${String(scene.scene_id).padStart(3, "0")}`;
+    const full = imageStyle.trim() ? `${tag} ${base}, ${imageStyle.trim()}` : `${tag} ${base}`;
     navigator.clipboard.writeText(full).then(() => {
       setPromptCopied(true);
       setTimeout(() => setPromptCopied(false), 1800);
@@ -281,7 +282,13 @@ export default function SceneCard({
                   <span className="text-xs font-semibold">{media.label}</span>
                 </div>
                 {scene.media.media_type === "ai_image" && scene.media.ai_image_prompt && (
-                  <p className="text-xs font-mono opacity-75 leading-relaxed">{scene.media.ai_image_prompt}</p>
+                  <div className="flex items-start gap-1.5">
+                    <p className="text-xs font-mono opacity-75 leading-relaxed flex-1">{scene.media.ai_image_prompt}</p>
+                    <button onClick={copyImagePrompt} title={`PT${String(scene.scene_id).padStart(3,"0")} 포함 복사`}
+                      className={`shrink-0 p-1 rounded transition-colors ${promptCopied ? "text-emerald-600" : "opacity-60 hover:opacity-100"}`}>
+                      {promptCopied ? <Check size={12} /> : <Copy size={12} />}
+                    </button>
+                  </div>
                 )}
                 {scene.media.stock_keywords && (
                   <div className="flex items-center gap-2">

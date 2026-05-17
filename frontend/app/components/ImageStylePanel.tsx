@@ -52,14 +52,15 @@ export default function ImageStylePanel({ style, onStyleChange, scenes }: Props)
     saveUserPresets(userPresets.filter((_, i) => i !== idx));
   }
 
-  // ai_image 장면만 추출하고 스타일 결합
+  // ai_image 장면만 추출하고 장면 태그 + 스타일 결합
   function buildPrompts(): string {
     const aiScenes = scenes.filter(s => s.media.media_type === "ai_image" && s.media.ai_image_prompt);
     if (aiScenes.length === 0) return "";
     return aiScenes
       .map(s => {
+        const tag = `PT${String(s.scene_id).padStart(3, "0")}`;
         const base = s.media.ai_image_prompt!.trim();
-        return style.trim() ? `${base}, ${style.trim()}` : base;
+        return style.trim() ? `${tag} ${base}, ${style.trim()}` : `${tag} ${base}`;
       })
       .join("\n");
   }
@@ -194,7 +195,7 @@ export default function ImageStylePanel({ style, onStyleChange, scenes }: Props)
         </div>
         {aiSceneCount > 0 && (
           <p className="text-xs text-gray-400">
-            형식: 장면 프롬프트{style.trim() ? " + 스타일" : ""} · 장면별 줄바꿈 구분
+            형식: <span className="font-mono">PT001</span> 프롬프트{style.trim() ? " + 스타일" : ""} · 장면별 줄바꿈 구분
           </p>
         )}
       </div>
