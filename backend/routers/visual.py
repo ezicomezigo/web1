@@ -9,7 +9,7 @@ from routers.projects import load_project, save_project, project_path
 router = APIRouter(prefix="/api/projects", tags=["visual"])
 logger = logging.getLogger(__name__)
 
-ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
+ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".jfif"}
 ALLOWED_VIDEO_EXT = {".mp4", ".mov", ".webm"}
 ALLOWED_EXT = ALLOWED_IMAGE_EXT | ALLOWED_VIDEO_EXT
 
