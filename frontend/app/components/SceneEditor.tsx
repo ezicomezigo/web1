@@ -341,19 +341,19 @@ export default function SceneEditor({
           <button onClick={handleBatchAudio} disabled={batchLoading || disabled}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40">
             {batchType === "audio" && batchProgress
-              ? <><Loader2 size={11} className="animate-spin" /> 오디오 {batchProgress.current}/{batchProgress.total}</>
+              ? <><Loader2 size={11} className="animate-spin" /> 장면 {batchProgress.sceneId} ({batchProgress.current}/{batchProgress.total})</>
               : <><Mic2 size={11} /> 전체 오디오 생성</>}
           </button>
           <button onClick={handleBatchSubtitle} disabled={batchLoading || disabled}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 disabled:opacity-40">
             {batchType === "subtitle" && batchProgress
-              ? <><Loader2 size={11} className="animate-spin" /> 자막 {batchProgress.current}/{batchProgress.total}</>
+              ? <><Loader2 size={11} className="animate-spin" /> 장면 {batchProgress.sceneId} ({batchProgress.current}/{batchProgress.total})</>
               : <><Captions size={11} /> 전체 자막 생성</>}
           </button>
           <button onClick={handleBatchRender} disabled={batchLoading || disabled}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-medium hover:bg-violet-700 disabled:opacity-40">
             {batchType === "render" && batchProgress
-              ? <><Loader2 size={11} className="animate-spin" /> 렌더 {batchProgress.current}/{batchProgress.total}</>
+              ? <><Loader2 size={11} className="animate-spin" /> 장면 {batchProgress.sceneId} ({batchProgress.current}/{batchProgress.total})</>
               : <><Clapperboard size={11} /> 전체 렌더링</>}
           </button>
 
@@ -468,6 +468,7 @@ export default function SceneEditor({
               projectId={projectId}
               ttsSettings={ttsSettings}
               batchMode={batchLoading ? batchMode : null}
+              batchSceneId={batchProgress?.sceneId ?? null}
               imageStyle={imageStyle}
               renderSettings={renderSettings}
               videoVersion={videoVersions[scene.scene_id] ?? 0}

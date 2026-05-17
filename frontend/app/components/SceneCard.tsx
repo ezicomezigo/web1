@@ -24,6 +24,7 @@ interface Props {
   projectId: string;
   ttsSettings: TTSSettings;
   batchMode: "all" | "missing" | null;
+  batchSceneId?: number | null;
   imageStyle: string;
   renderSettings: RenderSettings;
   onUpdate: (text: string, topicSummary: string, media: MediaPlan) => void;
@@ -56,7 +57,7 @@ function durationColor(sec: number) {
 }
 
 export default function SceneCard({
-  scene, index, total, projectId, ttsSettings, batchMode, imageStyle, renderSettings, videoVersion = 0,
+  scene, index, total, projectId, ttsSettings, batchMode, batchSceneId = null, imageStyle, renderSettings, videoVersion = 0,
   onUpdate, onAudioUpdate, onVisualUpdate, onSubtitleUpdate, onVideoUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -207,12 +208,23 @@ export default function SceneCard({
   // 배치 중 버튼 비활성화: all → 생성/재생성 모두, missing → 생성 버튼만
   const batchDisableGenerate = batchMode !== null;
   const batchDisableRegenerate = batchMode === "all";
+  // 현재 이 장면이 배치 작업 중인 장면인지
+  const isProcessing = batchSceneId === scene.scene_id;
 
   const liveDuration = editing ? estimateDuration(draftText) : scene.estimated_duration;
 
   return (
     <div ref={setNodeRef} style={style} id={`scene-${scene.scene_id}`} className="group relative scroll-mt-4">
-      <div className={`border rounded-xl bg-white shadow-sm transition-shadow ${isDragging ? "shadow-lg border-indigo-300" : "border-gray-100 hover:shadow-md"}`}>
+      <div className={`relative border rounded-xl bg-white shadow-sm transition-shadow ${isDragging ? "shadow-lg border-indigo-300" : isProcessing ? "border-indigo-300 shadow-md" : "border-gray-100 hover:shadow-md"}`}>
+        {/* 배치 작업 중 오버레이 */}
+        {isProcessing && (
+          <div className="absolute inset-0 bg-indigo-50/70 backdrop-blur-[1px] rounded-xl z-10 flex items-center justify-center pointer-events-none">
+            <div className="flex items-center gap-2 bg-white border border-indigo-200 rounded-lg px-3 py-1.5 shadow-sm">
+              <Loader2 size={13} className="animate-spin text-indigo-500 shrink-0" />
+              <span className="text-xs font-medium text-indigo-700">작업 중...</span>
+            </div>
+          </div>
+        )}
 
         {/* 헤더 */}
         <div className="flex items-center gap-2 px-3 pt-3 pb-2">
