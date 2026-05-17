@@ -153,6 +153,7 @@ def _build_cmd(
         "-preset", "fast",
         "-crf", "23",
         "-c:a", "aac",
+        "-ac", "2",
         "-b:a", "192k",
         "-shortest",
         "-pix_fmt", "yuv420p",
