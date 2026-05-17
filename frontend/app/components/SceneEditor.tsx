@@ -13,7 +13,7 @@ import { renumber, estimateDuration, DEFAULT_MEDIA } from "../utils/sceneOps";
 import SceneCard from "./SceneCard";
 import SplitSceneModal from "./SplitSceneModal";
 import AddSceneModal from "./AddSceneModal";
-import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2, Download } from "lucide-react";
+import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2, Download, Captions, Clapperboard } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
 
@@ -35,10 +35,13 @@ export default function SceneEditor({
 }: Props) {
   const [splitTarget, setSplitTarget] = useState<number | null>(null);
   const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null);
-  const [batchLoading, setBatchLoading] = useState(false);
+
+  type BatchType = "audio" | "subtitle" | "render";
+  const [batchType, setBatchType] = useState<BatchType | null>(null);
   const [batchMode, setBatchMode] = useState<"all" | "missing" | null>(null);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; sceneId: number } | null>(null);
   const [batchErrors, setBatchErrors] = useState<{ sceneId: number; error: string }[]>([]);
+  const batchLoading = batchType !== null;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -81,64 +84,103 @@ export default function SceneEditor({
     ));
   }
 
-  // ─── 전체 오디오 일괄 생성 (순차 호출로 진행 상황 표시) ──────────────────
-  async function handleBatchGenerate() {
-    const existing = scenes.filter(s => s.assets?.audio).length;
-    const missing = scenes.length - existing;
-    let targets: typeof scenes;
-
-    let mode: "all" | "missing";
+  // ─── 배치 작업 공통 헬퍼 ─────────────────────────────────────────────────
+  function pickBatchTargets(
+    hasItem: (s: typeof scenes[0]) => boolean,
+    label: string,
+    candidateFilter?: (s: typeof scenes[0]) => boolean,
+  ): { targets: typeof scenes; mode: "all" | "missing" } | null {
+    const eligible = candidateFilter ? scenes.filter(candidateFilter) : scenes;
+    if (eligible.length === 0) { alert(`${label}을 생성할 수 있는 장면이 없습니다.`); return null; }
+    const existing = eligible.filter(hasItem).length;
+    const missing = eligible.length - existing;
     if (existing === 0) {
-      if (!confirm(`${scenes.length}개 장면의 오디오를 생성합니다. 계속하시겠습니까?`)) return;
-      mode = "all";
-      targets = scenes;
-    } else if (missing === 0) {
-      if (!confirm(`모든 장면(${scenes.length}개)에 이미 오디오가 있습니다.\n전체 다시 생성하시겠습니까?`)) return;
-      mode = "all";
-      targets = scenes;
-    } else {
-      const choice = window.prompt(
-        `기존 오디오: ${existing}개 / 미생성: ${missing}개\n\n` +
-        `1: 전체 다시 생성 (${scenes.length}개)\n` +
-        `2: 미생성 장면만 생성 (${missing}개)\n\n` +
-        `숫자를 입력하세요 (1 또는 2):`,
-        "2"
-      );
-      if (choice !== "1" && choice !== "2") return;
-      mode = choice === "1" ? "all" : "missing";
-      targets = mode === "all" ? scenes : scenes.filter(s => !s.assets?.audio);
+      if (!confirm(`${eligible.length}개 장면의 ${label}을 생성합니다.`)) return null;
+      return { targets: eligible, mode: "missing" };
     }
+    if (missing === 0) {
+      if (!confirm(`모든 장면(${eligible.length}개)에 이미 ${label}이 있습니다.\n전체 다시 생성하시겠습니까?`)) return null;
+      return { targets: eligible, mode: "all" };
+    }
+    const choice = window.prompt(
+      `기존 ${label}: ${existing}개 / 미생성: ${missing}개\n\n` +
+      `1: 전체 다시 생성 (${eligible.length}개)\n2: 미생성 장면만 (${missing}개)\n\n숫자 입력 (1 또는 2):`, "2"
+    );
+    if (choice !== "1" && choice !== "2") return null;
+    const mode = choice === "1" ? "all" : "missing";
+    return { targets: mode === "all" ? eligible : eligible.filter(s => !hasItem(s)), mode };
+  }
 
-    setBatchLoading(true);
+  async function runBatch(
+    type: BatchType,
+    targets: typeof scenes,
+    mode: "all" | "missing",
+    action: (sc: typeof scenes[0]) => Promise<void>,
+  ) {
+    setBatchType(type);
     setBatchMode(mode);
     setBatchErrors([]);
     const errors: { sceneId: number; error: string }[] = [];
     try {
       for (let i = 0; i < targets.length; i++) {
-        const sc = targets[i];
-        setBatchProgress({ current: i + 1, total: targets.length, sceneId: sc.scene_id });
-        try {
-          const res = await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${sc.scene_id}/audio`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(ttsSettings),
-          });
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error(body.detail ?? `HTTP ${res.status}`);
-          }
-          const data: { audio_path: string; duration: number } = await res.json();
-          handleAudioUpdate(sc.scene_id, data.audio_path, data.duration);
-        } catch (e) {
-          errors.push({ sceneId: sc.scene_id, error: e instanceof Error ? e.message : "알 수 없는 오류" });
-        }
+        setBatchProgress({ current: i + 1, total: targets.length, sceneId: targets[i].scene_id });
+        try { await action(targets[i]); }
+        catch (e) { errors.push({ sceneId: targets[i].scene_id, error: e instanceof Error ? e.message : "오류" }); }
       }
     } finally {
       setBatchProgress(null);
       setBatchMode(null);
       setBatchErrors(errors);
-      setBatchLoading(false);
+      setBatchType(null);
     }
+  }
+
+  // ─── 전체 오디오 일괄 생성 ───────────────────────────────────────────────
+  async function handleBatchAudio() {
+    const pick = pickBatchTargets(s => !!s.assets?.audio, "오디오");
+    if (!pick) return;
+    await runBatch("audio", pick.targets, pick.mode, async (sc) => {
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${sc.scene_id}/audio`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ttsSettings),
+      });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail ?? `HTTP ${res.status}`); }
+      const data: { audio_path: string; duration: number } = await res.json();
+      handleAudioUpdate(sc.scene_id, data.audio_path, data.duration);
+    });
+  }
+
+  // ─── 전체 자막 일괄 생성 (오디오 있는 장면만) ───────────────────────────
+  async function handleBatchSubtitle() {
+    const pick = pickBatchTargets(
+      s => !!(s.assets?.subtitle?.length),
+      "자막",
+      s => !!s.assets?.audio,
+    );
+    if (!pick) return;
+    await runBatch("subtitle", pick.targets, pick.mode, async (sc) => {
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${sc.scene_id}/subtitle`, { method: "POST" });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail ?? `HTTP ${res.status}`); }
+      const data: SubtitleCue[] = await res.json();
+      handleSubtitleUpdate(sc.scene_id, data);
+    });
+  }
+
+  // ─── 전체 렌더링 일괄 생성 (오디오 있는 장면만, 비주얼/자막 옵션) ────────
+  async function handleBatchRender() {
+    const pick = pickBatchTargets(
+      s => !!s.assets?.video,
+      "렌더링",
+      s => !!s.assets?.audio,
+    );
+    if (!pick) return;
+    await runBatch("render", pick.targets, pick.mode, async (sc) => {
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${sc.scene_id}/render`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(renderSettings),
+      });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail ?? `HTTP ${res.status}`); }
+      const data: { video_path: string } = await res.json();
+      handleVideoUpdate(sc.scene_id, data.video_path);
+    });
   }
 
   // ─── 드래그앤드롭 ────────────────────────────────────────────────────────
@@ -211,39 +253,46 @@ export default function SceneEditor({
     )}
     <>
       {/* 요약 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 bg-indigo-50 rounded-xl border border-indigo-100 mb-4">
-        <div className="flex items-center gap-2 text-indigo-700">
-          <Film size={16} />
-          <span className="font-semibold text-sm">{scenes.length}개 장면</span>
+      <div className="flex flex-col gap-2 px-4 py-3 bg-indigo-50 rounded-xl border border-indigo-100 mb-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-indigo-700 shrink-0">
+            <Film size={16} />
+            <span className="font-semibold text-sm">{scenes.length}개 장면</span>
+          </div>
+          <div className="flex items-center gap-2 text-indigo-600 text-sm shrink-0">
+            <Clock size={14} />
+            <span>총 {totalMin > 0 ? `${totalMin}분 ` : ""}{totalSec}초</span>
+          </div>
+          <span className="text-xs text-indigo-400 flex-1">{aiProvider === "claude" ? "Claude" : "Gemini"} · {modelUsed}</span>
+          {scenes.some(s => s.assets?.subtitle?.length) && (
+            <a href={`${API_BASE}/api/projects/${projectId}/subtitle.srt`}
+              download={`subtitles-${projectId}.srt`}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-white shrink-0">
+              <Download size={11} /> SRT
+            </a>
+          )}
         </div>
-        <div className="flex items-center gap-2 text-indigo-600 text-sm">
-          <Clock size={14} />
-          <span>총 {totalMin > 0 ? `${totalMin}분 ` : ""}{totalSec}초</span>
+        {/* 일괄 생성 버튼 3종 */}
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={handleBatchAudio} disabled={batchLoading || disabled}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40">
+            {batchType === "audio" && batchProgress
+              ? <><Loader2 size={11} className="animate-spin" /> 오디오 {batchProgress.current}/{batchProgress.total}</>
+              : <><Mic2 size={11} /> 전체 오디오 생성</>}
+          </button>
+          <button onClick={handleBatchSubtitle} disabled={batchLoading || disabled}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 disabled:opacity-40">
+            {batchType === "subtitle" && batchProgress
+              ? <><Loader2 size={11} className="animate-spin" /> 자막 {batchProgress.current}/{batchProgress.total}</>
+              : <><Captions size={11} /> 전체 자막 생성</>}
+          </button>
+          <button onClick={handleBatchRender} disabled={batchLoading || disabled}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-medium hover:bg-violet-700 disabled:opacity-40">
+            {batchType === "render" && batchProgress
+              ? <><Loader2 size={11} className="animate-spin" /> 렌더 {batchProgress.current}/{batchProgress.total}</>
+              : <><Clapperboard size={11} /> 전체 렌더링</>}
+          </button>
         </div>
-        <span className="text-xs text-indigo-400">
-          {aiProvider === "claude" ? "Claude" : "Gemini"} · {modelUsed}
-        </span>
-        {scenes.some(s => s.assets?.subtitle?.length) && (
-          <a
-            href={`${API_BASE}/api/projects/${projectId}/subtitle.srt`}
-            download={`subtitles-${projectId}.srt`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50"
-          >
-            <Download size={11} /> SRT 다운로드
-          </a>
-        )}
-        <button
-          onClick={handleBatchGenerate}
-          disabled={batchLoading || disabled}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-40"
-        >
-          {batchLoading && batchProgress
-            ? <><Loader2 size={11} className="animate-spin" /> 장면 {batchProgress.sceneId} ({batchProgress.current}/{batchProgress.total})</>
-            : batchLoading
-              ? <><Loader2 size={11} className="animate-spin" /> 생성 중...</>
-              : <><Mic2 size={11} /> 전체 오디오 생성</>
-          }
-        </button>
       </div>
 
       {/* 진행률 바 */}
@@ -251,7 +300,9 @@ export default function SceneEditor({
         <div className="mb-3">
           <div className="h-1.5 bg-indigo-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-indigo-500 transition-all duration-300"
+              className={`h-full transition-all duration-300 ${
+                batchType === "subtitle" ? "bg-emerald-500" : batchType === "render" ? "bg-violet-500" : "bg-indigo-500"
+              }`}
               style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
             />
           </div>
@@ -261,7 +312,7 @@ export default function SceneEditor({
       {/* 배치 에러 요약 */}
       {batchErrors.length > 0 && !batchLoading && (
         <div className="mb-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          <p className="text-xs font-semibold text-red-700 mb-1.5">{batchErrors.length}개 장면 생성 실패</p>
+          <p className="text-xs font-semibold text-red-700 mb-1.5">{batchErrors.length}개 장면 실패</p>
           <div className="flex flex-col gap-1">
             {batchErrors.map(e => (
               <p key={e.sceneId} className="text-xs text-red-600 break-words">
