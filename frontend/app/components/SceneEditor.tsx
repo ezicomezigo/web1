@@ -14,7 +14,7 @@ import SceneCard from "./SceneCard";
 import SplitSceneModal from "./SplitSceneModal";
 import AddSceneModal from "./AddSceneModal";
 import FinalRenderPanel from "./FinalRenderPanel";
-import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2, Download, Captions, Clapperboard, FolderOpen } from "lucide-react";
+import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2, Download, Captions, Clapperboard, FolderOpen, Image } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
 
@@ -40,7 +40,7 @@ export default function SceneEditor({
   const folderInputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
 
-  type BatchType = "audio" | "subtitle" | "render";
+  type BatchType = "audio" | "subtitle" | "render" | "stock";
   const [batchType, setBatchType] = useState<BatchType | null>(null);
   const [batchMode, setBatchMode] = useState<"all" | "missing" | null>(null);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; sceneId: number } | null>(null);
@@ -188,6 +188,28 @@ export default function SceneEditor({
       if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail ?? `HTTP ${res.status}`); }
       const data: { video_path: string } = await res.json();
       handleVideoUpdate(sc.scene_id, data.video_path);
+    });
+  }
+
+  // ─── 전체 스톡 자동 적용 (stock_photo/stock_video 장면) ──────────────────
+  async function handleBatchStock() {
+    const isStock = (s: typeof scenes[0]) =>
+      (s.media.media_type === "stock_photo" || s.media.media_type === "stock_video") &&
+      !!(s.media.stock_keywords && s.media.stock_keywords.some(k => k.trim()));
+    const pick = pickBatchTargets(s => !!s.assets?.visual, "스톡 미디어", isStock);
+    if (!pick) return;
+    // 사용자에게 소스 선택 받기 (기본 pexels)
+    const src = window.prompt("스톡 소스 선택 (pexels / pixabay):", "pexels");
+    if (src === null) return;
+    const source = (src.trim().toLowerCase() === "pixabay") ? "pixabay" : "pexels";
+    await runBatch("stock", pick.targets, pick.mode, async (sc) => {
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}/scenes/${sc.scene_id}/visual/auto-select`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source, top_k: 10, per_page: 20 }),
+      });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail ?? `HTTP ${res.status}`); }
+      const data: { visual_path: string } = await res.json();
+      handleVisualUpdate(sc.scene_id, data.visual_path);
     });
   }
 
@@ -356,6 +378,13 @@ export default function SceneEditor({
               ? <><Loader2 size={11} className="animate-spin" /> 장면 {batchProgress.sceneId} ({batchProgress.current}/{batchProgress.total})</>
               : <><Clapperboard size={11} /> 전체 렌더링</>}
           </button>
+          <button onClick={handleBatchStock} disabled={batchLoading || disabled}
+            title="스톡 사진/영상 장면들에 키워드로 자동 검색·랜덤 선택 적용"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-medium hover:bg-sky-700 disabled:opacity-40">
+            {batchType === "stock" && batchProgress
+              ? <><Loader2 size={11} className="animate-spin" /> 장면 {batchProgress.sceneId} ({batchProgress.current}/{batchProgress.total})</>
+              : <><Image size={11} /> 전체 스톡 자동 적용</>}
+          </button>
 
           {/* 이미지 일괄 가져오기 */}
           <div className="flex gap-1">
@@ -410,7 +439,7 @@ export default function SceneEditor({
           <div className="h-1.5 bg-indigo-100 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-300 ${
-                batchType === "subtitle" ? "bg-emerald-500" : batchType === "render" ? "bg-violet-500" : "bg-indigo-500"
+                batchType === "subtitle" ? "bg-emerald-500" : batchType === "render" ? "bg-violet-500" : batchType === "stock" ? "bg-sky-500" : "bg-indigo-500"
               }`}
               style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
             />
