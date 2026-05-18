@@ -67,6 +67,9 @@ export function useProject(): UseProjectReturn {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 항상 최신 project를 가리키는 ref (saveProject stale closure 방지)
+  const projectRef = useRef<Project | null>(null);
+  projectRef.current = project;
 
   // 페이지 로드: 마지막 프로젝트 복원 또는 draft 확인
   useEffect(() => {
@@ -141,17 +144,18 @@ export function useProject(): UseProjectReturn {
   }, [draft, project]);
 
   const saveProject = useCallback(async () => {
-    if (!project) return;
+    const p = projectRef.current;
+    if (!p) return;
     setIsSaving(true);
     try {
-      const res = await apiFetch(`${API}/${project.id}`, {
+      const res = await apiFetch(`${API}/${p.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: project.name,
-          script: project.script,
-          analysis_info: project.analysis_info,
-          scenes: project.scenes,
+          name: p.name,
+          script: p.script,
+          analysis_info: p.analysis_info,
+          scenes: p.scenes,
         }),
       });
       const saved: Project = await res.json();
@@ -162,7 +166,7 @@ export function useProject(): UseProjectReturn {
     } finally {
       setIsSaving(false);
     }
-  }, [project]);
+  }, []);
 
   async function createProject(name: string): Promise<Project> {
     const res = await apiFetch(API, {
