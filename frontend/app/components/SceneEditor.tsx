@@ -14,7 +14,7 @@ import SceneCard from "./SceneCard";
 import SplitSceneModal from "./SplitSceneModal";
 import AddSceneModal from "./AddSceneModal";
 import FinalRenderPanel from "./FinalRenderPanel";
-import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2, Download, Captions, Clapperboard, FolderOpen, Image } from "lucide-react";
+import { Film, Clock, AlertTriangle, CheckCircle, Plus, Mic2, Loader2, Download, Captions, Clapperboard, FolderOpen, Image, Bookmark } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
 
@@ -35,6 +35,11 @@ interface Props {
 export default function SceneEditor({
   scenes, onChange, warnings, aiProvider, modelUsed, disabled = false, projectId, ttsSettings, imageStyle, renderSettings, onSaveNow,
 }: Props) {
+  const [bookmarkedSceneId, setBookmarkedSceneId] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem(`yt-bookmark-${projectId}`);
+    return raw ? parseInt(raw, 10) : null;
+  });
   const [splitTarget, setSplitTarget] = useState<number | null>(null);
   const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null);
   const [importResult, setImportResult] = useState<{ ok: number; skip: number; errors: string[] } | null>(null);
@@ -274,6 +279,24 @@ export default function SceneEditor({
     setImportResult({ ok, skip: unmatched.length, errors });
   }
 
+  // ─── 북마크 ──────────────────────────────────────────────────────────────
+  function toggleBookmark(sceneId: number) {
+    const next = bookmarkedSceneId === sceneId ? null : sceneId;
+    setBookmarkedSceneId(next);
+    if (next === null) {
+      localStorage.removeItem(`yt-bookmark-${projectId}`);
+    } else {
+      localStorage.setItem(`yt-bookmark-${projectId}`, String(next));
+    }
+    window.dispatchEvent(new CustomEvent("yt-bookmark-change", { detail: next }));
+  }
+
+  function jumpToBookmark() {
+    if (bookmarkedSceneId === null) return;
+    const el = document.getElementById(`scene-${bookmarkedSceneId}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   // ─── 드래그앤드롭 ────────────────────────────────────────────────────────
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
@@ -361,6 +384,15 @@ export default function SceneEditor({
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-white shrink-0">
               <Download size={11} /> SRT
             </a>
+          )}
+          {bookmarkedSceneId !== null && (
+            <button
+              onClick={jumpToBookmark}
+              title={`북마크된 장면 ${bookmarkedSceneId}으로 이동`}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100 shrink-0"
+            >
+              <Bookmark size={11} fill="currentColor" /> 장면 {bookmarkedSceneId}
+            </button>
           )}
         </div>
         {/* 일괄 생성 버튼 */}
@@ -507,6 +539,8 @@ export default function SceneEditor({
               imageStyle={imageStyle}
               renderSettings={renderSettings}
               videoVersion={videoVersions[scene.scene_id] ?? 0}
+              isBookmarked={bookmarkedSceneId === scene.scene_id}
+              onToggleBookmark={() => toggleBookmark(scene.scene_id)}
               onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
               onSaveNow={onSaveNow}
               onAudioUpdate={handleAudioUpdate}

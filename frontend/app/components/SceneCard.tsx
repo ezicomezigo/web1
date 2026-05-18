@@ -12,7 +12,7 @@ import SceneRender from "./SceneRender";
 import {
   GripVertical, Pencil, Check, X, Scissors,
   Trash2, Plus, Sparkles, Image, Video,
-  ChevronUp, ChevronDown, Mic2, Loader2, Play, RotateCcw, Trash, Upload, Copy, Search as SearchIcon, ClipboardPaste,
+  ChevronUp, ChevronDown, Mic2, Loader2, Play, RotateCcw, Trash, Upload, Copy, Search as SearchIcon, ClipboardPaste, Bookmark,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
@@ -35,6 +35,8 @@ interface Props {
   onSubtitleUpdate: (sceneId: number, cues: SubtitleCue[] | null) => void;
   onVideoUpdate: (sceneId: number, videoPath: string | null) => void;
   videoVersion?: number;
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
   onSplit: () => void;
   onMerge: (dir: "up" | "down") => void;
   onDelete: () => void;
@@ -60,6 +62,7 @@ function durationColor(sec: number) {
 
 export default function SceneCard({
   scene, index, total, projectId, ttsSettings, batchMode, batchSceneId = null, audioVersion: externalAudioVersion = 0, imageStyle, renderSettings, videoVersion = 0,
+  isBookmarked = false, onToggleBookmark,
   onUpdate, onSaveNow, onAudioUpdate, onVisualUpdate, onSubtitleUpdate, onVideoUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -260,6 +263,13 @@ export default function SceneCard({
           ) : (
             <p className="flex-1 text-sm font-medium text-gray-700 truncate">{scene.topic_summary}</p>
           )}
+          <button
+            onClick={onToggleBookmark}
+            title={isBookmarked ? "북마크 해제" : "북마크 설정"}
+            className={`shrink-0 p-1 rounded transition-colors ${isBookmarked ? "text-amber-500 hover:text-amber-600" : "text-gray-300 hover:text-amber-400"}`}
+          >
+            <Bookmark size={14} fill={isBookmarked ? "currentColor" : "none"} />
+          </button>
           <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 shrink-0">
             {MOOD_LABEL[scene.media.mood]}
           </span>

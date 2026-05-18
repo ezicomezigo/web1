@@ -107,7 +107,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <SceneJumpNav scenes={scenes} />
+      <SceneJumpNav scenes={scenes} projectId={project?.id ?? null} />
       <div className="max-w-5xl mx-auto px-4 py-10">
 
         {/* 헤더 */}
