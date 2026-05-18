@@ -35,10 +35,20 @@ interface Props {
 export default function SceneEditor({
   scenes, onChange, warnings, aiProvider, modelUsed, disabled = false, projectId, ttsSettings, imageStyle, renderSettings, onSaveNow,
 }: Props) {
-  const [bookmarkedSceneId, setBookmarkedSceneId] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
+  const [bookmarkedSceneIds, setBookmarkedSceneIds] = useState<number[]>(() => {
+    if (typeof window === "undefined") return [];
     const raw = localStorage.getItem(`yt-bookmark-${projectId}`);
-    return raw ? parseInt(raw, 10) : null;
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.filter((n): n is number => typeof n === "number");
+      // 구버전: 단일 숫자 문자열
+      const n = parseInt(raw, 10);
+      return isNaN(n) ? [] : [n];
+    } catch {
+      const n = parseInt(raw, 10);
+      return isNaN(n) ? [] : [n];
+    }
   });
   const [splitTarget, setSplitTarget] = useState<number | null>(null);
   const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null);
@@ -279,21 +289,22 @@ export default function SceneEditor({
     setImportResult({ ok, skip: unmatched.length, errors });
   }
 
-  // ─── 북마크 ──────────────────────────────────────────────────────────────
+  // ─── 북마크 (복수) ───────────────────────────────────────────────────────
   function toggleBookmark(sceneId: number) {
-    const next = bookmarkedSceneId === sceneId ? null : sceneId;
-    setBookmarkedSceneId(next);
-    if (next === null) {
+    const next = bookmarkedSceneIds.includes(sceneId)
+      ? bookmarkedSceneIds.filter(id => id !== sceneId)
+      : [...bookmarkedSceneIds, sceneId].sort((a, b) => a - b);
+    setBookmarkedSceneIds(next);
+    if (next.length === 0) {
       localStorage.removeItem(`yt-bookmark-${projectId}`);
     } else {
-      localStorage.setItem(`yt-bookmark-${projectId}`, String(next));
+      localStorage.setItem(`yt-bookmark-${projectId}`, JSON.stringify(next));
     }
     window.dispatchEvent(new CustomEvent("yt-bookmark-change", { detail: next }));
   }
 
-  function jumpToBookmark() {
-    if (bookmarkedSceneId === null) return;
-    const el = document.getElementById(`scene-${bookmarkedSceneId}`);
+  function jumpToScene(id: number) {
+    const el = document.getElementById(`scene-${id}`);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -385,14 +396,20 @@ export default function SceneEditor({
               <Download size={11} /> SRT
             </a>
           )}
-          {bookmarkedSceneId !== null && (
-            <button
-              onClick={jumpToBookmark}
-              title={`북마크된 장면 ${bookmarkedSceneId}으로 이동`}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100 shrink-0"
-            >
-              <Bookmark size={11} fill="currentColor" /> 장면 {bookmarkedSceneId}
-            </button>
+          {bookmarkedSceneIds.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap shrink-0">
+              <Bookmark size={11} className="text-amber-500" fill="currentColor" />
+              {bookmarkedSceneIds.map(id => (
+                <button
+                  key={id}
+                  onClick={() => jumpToScene(id)}
+                  title={`장면 ${id}으로 이동`}
+                  className="px-2 py-0.5 rounded-md border border-amber-300 bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100"
+                >
+                  {id}
+                </button>
+              ))}
+            </div>
           )}
         </div>
         {/* 일괄 생성 버튼 */}
@@ -539,7 +556,7 @@ export default function SceneEditor({
               imageStyle={imageStyle}
               renderSettings={renderSettings}
               videoVersion={videoVersions[scene.scene_id] ?? 0}
-              isBookmarked={bookmarkedSceneId === scene.scene_id}
+              isBookmarked={bookmarkedSceneIds.includes(scene.scene_id)}
               onToggleBookmark={() => toggleBookmark(scene.scene_id)}
               onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
               onSaveNow={onSaveNow}
