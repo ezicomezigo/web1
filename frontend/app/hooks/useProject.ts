@@ -106,12 +106,28 @@ export function useProject(): UseProjectReturn {
     return () => window.removeEventListener("keydown", handler);
   });
 
-  // 자동저장 (30초, 변경 있을 때만)
+  // 자동저장 (타이핑: 1.5초 디바운스 / 에셋 변경: 300ms)
+  const saveDebounceMs = useRef(1_500);
   useEffect(() => {
     if (!isDirty || !project) return;
-    autoSaveTimer.current = setTimeout(() => saveProject(), 30_000);
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => saveProject(), saveDebounceMs.current);
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
   }, [isDirty, project?.scenes, project?.script]);
+
+  // 에셋 변경(오디오·비주얼·자막·영상) 감지 → 디바운스를 짧게 설정하고 isDirty 갱신
+  const prevAssetsRef = useRef<string>("");
+  useEffect(() => {
+    if (!project) return;
+    const assetsKey = project.scenes.map(s =>
+      `${s.scene_id}:${s.assets?.audio ?? ""}|${s.assets?.visual ?? ""}|${s.assets?.video ?? ""}|${s.assets?.subtitle?.length ?? 0}`
+    ).join(",");
+    if (assetsKey !== prevAssetsRef.current && prevAssetsRef.current !== "") {
+      saveDebounceMs.current = 300;
+      setTimeout(() => { saveDebounceMs.current = 1_500; }, 500);
+    }
+    prevAssetsRef.current = assetsKey;
+  }, [project?.scenes]);
 
   // 프로젝트 없을 때 draft를 localStorage에 보존 (1초 디바운스)
   useEffect(() => {
