@@ -29,6 +29,7 @@ interface Props {
   imageStyle: string;
   renderSettings: RenderSettings;
   onUpdate: (text: string, topicSummary: string, media: MediaPlan) => void;
+  onSaveNow?: () => void;
   onAudioUpdate: (sceneId: number, audioPath: string | null, duration: number) => void;
   onVisualUpdate: (sceneId: number, visualPath: string | null) => void;
   onSubtitleUpdate: (sceneId: number, cues: SubtitleCue[] | null) => void;
@@ -59,7 +60,7 @@ function durationColor(sec: number) {
 
 export default function SceneCard({
   scene, index, total, projectId, ttsSettings, batchMode, batchSceneId = null, audioVersion: externalAudioVersion = 0, imageStyle, renderSettings, videoVersion = 0,
-  onUpdate, onAudioUpdate, onVisualUpdate, onSubtitleUpdate, onVideoUpdate, onSplit, onMerge, onDelete, onAddAfter,
+  onUpdate, onSaveNow, onAudioUpdate, onVisualUpdate, onSubtitleUpdate, onVideoUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(scene.text);
@@ -99,6 +100,7 @@ export default function SceneCard({
   function saveEdit() {
     if (draftText.trim()) {
       onUpdate(draftText.trim(), draftTopic.trim() || scene.topic_summary, draftMedia);
+      onSaveNow?.();
     }
     setEditing(false);
   }

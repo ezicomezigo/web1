@@ -19,7 +19,7 @@ export default function Home() {
   const {
     project, isDirty, isSaving, lastSavedAt, draft,
     createProject, createProjectWithData, loadProject, saveProject, deleteProject, renameProject, listProjects,
-    setScript, setScenes, setAnalysisInfo, clearDraft,
+    setScript, setScenes, setAnalysisInfo, triggerSave, clearDraft,
   } = useProject();
 
   const [provider, setProvider] = useLocalStorageState<AIProvider>("yt-ai-provider", "claude");
@@ -246,6 +246,7 @@ export default function Home() {
               ttsSettings={ttsSettings}
               imageStyle={imageStyle}
               renderSettings={renderSettings}
+              onSaveNow={triggerSave}
             />
           </div>
         )}

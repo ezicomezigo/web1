@@ -32,6 +32,7 @@ export interface UseProjectReturn {
   setScript: (s: string) => void;
   setScenes: (s: Scene[] | ((prev: Scene[]) => Scene[])) => void;
   setAnalysisInfo: (a: AnalysisInfo | null) => void;
+  triggerSave: () => void;
   clearDraft: () => void;
   discardProject: () => void;
 }
@@ -272,6 +273,12 @@ export function useProject(): UseProjectReturn {
     setIsDirty(true);
   }
 
+  // 즉시 저장 트리거 (저장 버튼 클릭 등 명시적 확정 시 호출)
+  function triggerSave() {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    if (project) saveProject();
+  }
+
   function clearDraft() {
     localStorage.removeItem(DRAFT_KEY);
     setDraft(null);
@@ -288,7 +295,7 @@ export function useProject(): UseProjectReturn {
     project, isDirty, isSaving, lastSavedAt, draft,
     createProject, createProjectWithData,
     loadProject, saveProject, deleteProject, renameProject, listProjects,
-    setScript, setScenes, setAnalysisInfo,
+    setScript, setScenes, setAnalysisInfo, triggerSave,
     clearDraft, discardProject,
   };
 }

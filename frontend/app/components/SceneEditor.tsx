@@ -29,10 +29,11 @@ interface Props {
   ttsSettings: TTSSettings;
   imageStyle: string;
   renderSettings: RenderSettings;
+  onSaveNow?: () => void;
 }
 
 export default function SceneEditor({
-  scenes, onChange, warnings, aiProvider, modelUsed, disabled = false, projectId, ttsSettings, imageStyle, renderSettings,
+  scenes, onChange, warnings, aiProvider, modelUsed, disabled = false, projectId, ttsSettings, imageStyle, renderSettings, onSaveNow,
 }: Props) {
   const [splitTarget, setSplitTarget] = useState<number | null>(null);
   const [addAfterIndex, setAddAfterIndex] = useState<number | null>(null);
@@ -507,6 +508,7 @@ export default function SceneEditor({
               renderSettings={renderSettings}
               videoVersion={videoVersions[scene.scene_id] ?? 0}
               onUpdate={(text, topic, media) => handleUpdate(index, text, topic, media)}
+              onSaveNow={onSaveNow}
               onAudioUpdate={handleAudioUpdate}
               onVisualUpdate={handleVisualUpdate}
               onSubtitleUpdate={handleSubtitleUpdate}
