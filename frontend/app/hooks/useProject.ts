@@ -278,9 +278,13 @@ export function useProject(): UseProjectReturn {
   }
 
   // 즉시 저장 트리거 (저장 버튼 클릭 등 명시적 확정 시 호출)
+  // setTimeout(0)로 다음 tick에 실행 → React가 직전 setProject(...)를 commit한 뒤
+  // projectRef.current가 최신값을 가리키게 되어 stale closure 방지
   function triggerSave() {
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    if (project) saveProject();
+    setTimeout(() => {
+      if (projectRef.current) saveProject();
+    }, 0);
   }
 
   function clearDraft() {
