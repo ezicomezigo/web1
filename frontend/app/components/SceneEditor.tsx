@@ -45,6 +45,7 @@ export default function SceneEditor({
   const [batchMode, setBatchMode] = useState<"all" | "missing" | null>(null);
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; sceneId: number } | null>(null);
   const [batchErrors, setBatchErrors] = useState<{ sceneId: number; error: string }[]>([]);
+  const [audioVersions, setAudioVersions] = useState<Record<number, number>>({});
   const [videoVersions, setVideoVersions] = useState<Record<number, number>>({});
   const batchLoading = batchType !== null;
 
@@ -63,6 +64,9 @@ export default function SceneEditor({
       ? { ...s, assets: { ...(s.assets ?? { visual: null }), audio: audioPath }, estimated_duration: duration }
       : s
     ));
+    if (audioPath) {
+      setAudioVersions(prev => ({ ...prev, [sceneId]: (prev[sceneId] ?? 0) + 1 }));
+    }
   }
 
   // ─── 비주얼 업데이트 ─────────────────────────────────────────────────────
@@ -498,6 +502,7 @@ export default function SceneEditor({
               ttsSettings={ttsSettings}
               batchMode={batchLoading ? batchMode : null}
               batchSceneId={batchProgress?.sceneId ?? null}
+              audioVersion={audioVersions[scene.scene_id] ?? 0}
               imageStyle={imageStyle}
               renderSettings={renderSettings}
               videoVersion={videoVersions[scene.scene_id] ?? 0}

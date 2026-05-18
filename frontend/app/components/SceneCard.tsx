@@ -25,6 +25,7 @@ interface Props {
   ttsSettings: TTSSettings;
   batchMode: "all" | "missing" | null;
   batchSceneId?: number | null;
+  audioVersion?: number;
   imageStyle: string;
   renderSettings: RenderSettings;
   onUpdate: (text: string, topicSummary: string, media: MediaPlan) => void;
@@ -57,7 +58,7 @@ function durationColor(sec: number) {
 }
 
 export default function SceneCard({
-  scene, index, total, projectId, ttsSettings, batchMode, batchSceneId = null, imageStyle, renderSettings, videoVersion = 0,
+  scene, index, total, projectId, ttsSettings, batchMode, batchSceneId = null, audioVersion: externalAudioVersion = 0, imageStyle, renderSettings, videoVersion = 0,
   onUpdate, onAudioUpdate, onVisualUpdate, onSubtitleUpdate, onVideoUpdate, onSplit, onMerge, onDelete, onAddAfter,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -66,6 +67,7 @@ export default function SceneCard({
   const [draftMedia, setDraftMedia] = useState<MediaPlan>(scene.media);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [audioVersion, setAudioVersion] = useState(0);
   const [visualUploading, setVisualUploading] = useState(false);
   const [visualError, setVisualError] = useState<string | null>(null);
   const [showStockSearch, setShowStockSearch] = useState(false);
@@ -119,6 +121,7 @@ export default function SceneCard({
         throw new Error(body.detail ?? `HTTP ${res.status}`);
       }
       const data: { audio_path: string; duration: number } = await res.json();
+      setAudioVersion(v => v + 1);
       onAudioUpdate(scene.scene_id, data.audio_path, data.duration);
     } catch (e) {
       setAudioError(e instanceof Error ? e.message : "오디오 생성 실패");
@@ -195,8 +198,9 @@ export default function SceneCard({
     }
   }
 
+  const totalAudioVersion = audioVersion + externalAudioVersion;
   const audioUrl = scene.assets?.audio
-    ? `${API_BASE}/api/projects/${projectId}/${scene.assets.audio}`
+    ? `${API_BASE}/api/projects/${projectId}/${scene.assets.audio}${totalAudioVersion ? `?v=${totalAudioVersion}` : ""}`
     : null;
   const visualUrl = scene.assets?.visual
     ? `${API_BASE}/api/projects/${projectId}/${scene.assets.visual}${visualVersion ? `?v=${visualVersion}` : ""}`
